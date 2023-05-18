@@ -45,6 +45,18 @@ class Blog:
             return
         self.blog_list[new_post.get_authorNtitle()] = new_post
 
+    def get_posts_by_author(self, author):
+        assert isinstance(author, str)
+        found = False
+        print(f"Looking for all the post from {author}...")
+        for authorNtitle, post in self.blog_list.items():
+            if author == authorNtitle[0]:
+                print(f"\t{authorNtitle[1]}: {post.get_content()}")
+                found = True
+        if not found:
+            print("\tThis user/author has not any post yet!")
+        print()
+
     def get_post(self, authorNtitle):
         assert isinstance(authorNtitle, tuple)
 
@@ -73,10 +85,12 @@ if __name__  == '__main__':
     blog = Blog()
     post1 = Post('Marcus','Answer for the final exam', 'ABCDEFG')
     post2 = Post('bob','title bob', 'cotent from bob')
-    post3 = Post('Marcus','Answer for the final exam', 'Testing cotent from Marcus')
+    post3 = Post('Marcus','Answer2 for the final exam', 'ZXCVB')
+    post4 = Post('Marcus','Answer3 for the final exam', 'BMNJL')
     blog.makeNewPost(post1)
     blog.makeNewPost(post2)
     blog.makeNewPost(post3)
+    blog.makeNewPost(post4)
     # print(blog)
     blog.view_all_posts()
 
@@ -87,18 +101,22 @@ if __name__  == '__main__':
 
 
     
-    try:
-        blog.get_post(('bob','title bob')).add_comment(follower="Marcus", new_content="goood!")
-    except Exception as e:
-        print("Double the author and title again!!!\n")
+    # try:
+    #     blog.get_post(('bob','title bob')).add_comment(follower="Marcus", new_content="goood!")
+    # except Exception as e:
+    #     print("Double the author and title again!!!\n")
         
-    try:
-        blog.get_post(('bob','title 2ob')).add_comment(follower="Marcus", new_content="goood!")
-    except Exception as e:
-        print("Double the author and title again!!!\n")
+    # try:
+    #     blog.get_post(('bob','title 2ob')).add_comment(follower="Marcus", new_content="goood!")
+    # except Exception as e:
+    #     print("Double the author and title again!!!\n")
 
 
-    blog.get_post(('bob','title bob')).get_comment()
-    
+    # blog.get_post(('bob','title bob')).get_comment()
+
+
+
+    blog.get_posts_by_author("Marcus")
+    blog.get_posts_by_author("asda")
     print("Done!")
 
