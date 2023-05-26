@@ -1,3 +1,7 @@
+# CS171 Final Project, June 2023
+# blog.py
+# Author: Wenjin Li
+
 class Post:
     def __init__(self, username, title, content):
         self.authorNtitle = (username, title)
@@ -87,10 +91,12 @@ if __name__  == '__main__':
     post2 = Post('bob','title bob', 'cotent from bob')
     post3 = Post('Marcus','Answer2 for the final exam', 'ZXCVB')
     post4 = Post('Marcus','Answer3 for the final exam', 'BMNJL')
+    post5 = Post('Marcus','Answer3 for the final exam', 'BMNJL')
     blog.makeNewPost(post1)
     blog.makeNewPost(post2)
     blog.makeNewPost(post3)
     blog.makeNewPost(post4)
+    blog.makeNewPost(post5)
     # print(blog)
     blog.view_all_posts()
 
