@@ -15,14 +15,12 @@ class Queue:
 
         # custom comparator function, first sorts by 
         # x[0] (first element in tuple, which is lamport time)
-        # then sorts by
+        # then sorts byå
         # x[1] (second element in tuple, which is process id to break ties)
         # self.requests.sort(key = lambda x: (x[0], x[1]) )
     
     def isEmpty(self):
-        if self.size() == 0:
-            return True
-        return False
+        return len(self.new_request) == 0
 
     def size(self):
         return len(self.requests)
@@ -36,7 +34,13 @@ class Queue:
     def __str__(self):
         return str(self.requests)
     
-
+    def printQueue(self):
+        for operation in self.requests:
+            print(operation)
+    
+    def getOperations(self):
+        return self.requests
+ 
 if __name__  == '__main__':
     q = Queue()
     q.append("POST username title content")
