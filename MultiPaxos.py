@@ -9,7 +9,8 @@ DECIDE = "DECIDE"
 
 class Message:
     def __init__(self, msg_type, ballot_num=None, ballot_num_id=None, depth=None,
-                  accepted_num=None, accepted_num_id=None, accepted_val=None, sender=None, receiver=None):
+                  accepted_num=None, accepted_num_id=None, accepted_val=None, msg_to_leader=None, 
+                  sender=None, receiver=None):
         self.msg_type = msg_type
         self.ballot_num = ballot_num
         self.ballot_num_id = ballot_num_id
@@ -17,6 +18,7 @@ class Message:
         self.accepted_num = accepted_num
         self.accepted_num_id = accepted_num_id
         self.accepted_val = accepted_val
+        self.msg_to_leader = msg_to_leader # list here 
         self.sender = sender
         self.receiver = receiver
     
@@ -82,7 +84,7 @@ class Paxos:
         self.ballot_num += 1
         print(f"{self.id} sent: {PREPARE} <{self.ballot_num},{self.id}>")
         # return Message(PREPARE, ballot_num=self.ballot_num, ballot_num_id=self.id, sender=self.id)
-        return Message(PREPARE, ballot_num=self.ballot_num, ballot_num_id=self.id)
+        return Message(PREPARE, ballot_num=self.ballot_num, ballot_num_id=self.id, sender=self.id)
 
     def receive_prepare(self, message):
         # if here is P2's terminal now:

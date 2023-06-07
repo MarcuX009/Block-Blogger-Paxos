@@ -108,18 +108,18 @@ class Server:
                 else:
                     # send PERPARE with BallotNumber
                     self.receiceNum = 0
-                    if self.curr_leader == '':
+                    if self.curr_leader == '': # if curr leader is empty
                         self.Paxos.add_proposal(user_input)
                         message_dict = self.Paxos.prepare().to_dict()
                         message_json = json.dumps(message_dict)
                         self.broadcast_message(message_json)
                     else: # if curr leader is not empty
                         if self.curr_leader == self.name: # if it's ourself
-
+                            # TODO:
                             self.create_new_post(user_input)
                         else: # if not ourself
-                            msgToLeader = MultiPaxos.Message(msg_type=user_input[0], sender=self.Paxos)
-                            self.broadcast_msg_to(self.curr_leader, user_input)
+                            msgToLeader = MultiPaxos.Message(msg_type=user_input.split()[0], msg_to_leader=user_input.split(), sender=self.name)
+                            self.broadcast_msg_to(self.curr_leader, msgToLeader)
                    
             else:
                     print(f"{user_input}, wrong input")
@@ -173,7 +173,19 @@ class Server:
                     message = json.loads(message_json)
                     # print(type(message)) # it's dict here
                     # print(f"Received in client.py: {message}")
-                    if 
+                    if message["msg_type"] == "POST":
+                        if self.curr_leader == self.name:
+                        # know my self is leader, and others know myself is leader
+                        
+                            self.Paxos.add_proposal(user_input)
+                            message_dict = self.Paxos.prepare().to_dict()
+                            message_json = json.dumps(message_dict)
+                            self.broadcast_message(message_json)
+                        else:
+                        #if leader is not self, redirect the message to the known leader again
+                            msgToLeader = MultiPaxos.Message(msg_type=message["msg_type"], msg_to_leader=message["msg_to_leader"], sender=self.name)
+                            self.broadcast_msg_to(self.curr_leader, msgToLeader)
+                            
                     elif message["msg_type"] == "PREPARE":
                         pre_PROMISE_msg = self.Paxos.receive_prepare(message)
                         # print(f"Received in client.py: {pre_PROMISE_msg.id}")
@@ -181,9 +193,12 @@ class Server:
                             pre_PROMISE_dict = pre_PROMISE_msg.to_dict()
                             message_json = json.dumps(pre_PROMISE_dict)
                             self.broadcast_msg_to(id=pre_PROMISE_dict['ballot_num_id'], message=message_json)
+                            # set the sender to curr_leader
+                            self.curr_leader =  message['sender']
 
                     elif message["msg_type"] == "PROMISE": # Phase two: handling all promise msg
                         print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']}")
+                        
                         self.receiceNum += 1
                         self.promise_all_val.append(message['accepted_val'])
                         self.promises[message['sender']] = message
@@ -257,8 +272,7 @@ class Server:
                         # decision
                         
                         self.create_new_post(message['accepted_val'])
-                        # set the sender to curr_leader
-                        self.curr_leader =  message['sender']
+                        
                         self.Paxos.clear()
 
 
