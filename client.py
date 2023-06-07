@@ -11,6 +11,7 @@ import json
 import BlockChain as BC
 import Blog
 import MultiPaxos
+import Queue
 
 from time import sleep
 from os import _exit
@@ -38,6 +39,8 @@ class Server:
         self.ImAleader = False
         self.curr_leader = ''
         self.prev_leader = ''
+        self.serverQueue = Queue.Queue()
+        self.paxosQueue = Queue.Queue()
 
     def print_ports_dict(self):
         print(f'{self.ports}')
@@ -116,7 +119,9 @@ class Server:
                     else: # if curr leader is not empty
                         if self.curr_leader == self.name: # if it's ourself
                             # TODO:
-                            self.create_new_post(user_input)
+                            # self.create_new_post(user_input)
+                            # add the message to the server queue
+                            self.serverQueue.append(user_input)
                         else: # if not ourself
                             msgToLeader = MultiPaxos.Message(msg_type=user_input.split()[0], msg_to_leader=user_input.split(), sender=self.name)
                             self.broadcast_msg_to(self.curr_leader, msgToLeader)
@@ -176,7 +181,7 @@ class Server:
                     if message["msg_type"] == "POST":
                         if self.curr_leader == self.name:
                         # know my self is leader, and others know myself is leader
-                        
+                            self.serverQueue.append(message["msg_to_leader"])
                             self.Paxos.add_proposal(user_input)
                             message_dict = self.Paxos.prepare().to_dict()
                             message_json = json.dumps(message_dict)
@@ -312,6 +317,28 @@ class Server:
         print("exit")
         print("")
 
+    #handle the request in the queue by pick the first request in the queue and pop if after handling it
+    def handle_queue(self):
+        while True:
+            #check if self is leader, if not, flush the queue
+            if self.curr_leader != self.name:
+                self.serverQueue = []
+                sleep(0.1)
+                continue
+            else:
+                if len(self.serverQueue) > 0:
+                    request = self.serverQueue.peek()
+                    self.serverQueue.pop(0)
+                    self.handle_request(request)
+                sleep(0.1)
+
+    def handle_request(self, request):
+        # send to accept msg all
+        message_dict = self.Paxos.leader_send_accept(request).to_dict()
+        message_json = json.dumps(message_dict)
+        self.broadcast_message(message_json)
+        # set myself to be a leader:
+        # self.curr_leader = self.Paxos.get_id()
 
 ################      global      ################
 BC_Logs = []
@@ -330,6 +357,7 @@ if __name__ == '__main__':
     server = Server(port=port)
     server.start()
     threading.Thread(target=server.connect_to_peers, args=()).start()
-
+    # create a new thread to handle the operations stored in the queue
+    threading.Thread(target=server.handle_queue, args=()).start()
     # server.print_ports_dict()
     print(f"{server.name}: I have finished setting up the server!")

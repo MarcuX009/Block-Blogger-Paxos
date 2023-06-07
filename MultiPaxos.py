@@ -129,6 +129,10 @@ class Paxos:
         # else:
         #     return None # reject, need check
 
+    def leader_send_accept(self,request):
+        print(f"{self.id} sent: {ACCEPT} <{self.ballot_num},{self.ballot_num_id}> '{request}'")
+        return Message(ACCEPT, accepted_num=self.ballot_num, accepted_num_id=self.ballot_num_id, accepted_val=request, sender=self.id)
+    
     def received_majority_accepted(self,accepted_value=None):
         if accepted_value is not None:
             self.accepted_value = accepted_value
