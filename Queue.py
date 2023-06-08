@@ -15,7 +15,7 @@ class Queue:
 
         # custom comparator function, first sorts by 
         # x[0] (first element in tuple, which is lamport time)
-        # then sorts byå
+        # then sorts by
         # x[1] (second element in tuple, which is process id to break ties)
         # self.requests.sort(key = lambda x: (x[0], x[1]) )
     
@@ -28,8 +28,8 @@ class Queue:
     def pop(self):
         return self.requests.pop(0)
 
-    def peek(self):
-        return self.requests[0]
+    # def returnFirst(self):
+        # return self.requests[0]
     
     def __str__(self):
         return str(self.requests)
@@ -46,7 +46,7 @@ if __name__  == '__main__':
     q.append("POST username title content")
     userinput = input()
     q.append(userinput)
-    print(q)
+    print(q.pop())
 
     # print(q)
 
