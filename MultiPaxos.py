@@ -80,77 +80,79 @@ class Paxos:
     def add_proposal(self, command):
         self.proposal = command
 
+    def depth_increment(self):
+        self.depth +=1
+
     def prepare(self):
         self.ballot_num += 1
-        print(f"{self.id} sent: {PREPARE} <{self.ballot_num},{self.id}>")
-        # return Message(PREPARE, ballot_num=self.ballot_num, ballot_num_id=self.id, sender=self.id)
-        return Message(PREPARE, ballot_num=self.ballot_num, ballot_num_id=self.id, sender=self.id)
+        print(f"{self.id} sent: {PREPARE} <{self.ballot_num},{self.id}> depth={(self.depth+1)}")
+        return Message(PREPARE, ballot_num=self.ballot_num, ballot_num_id=self.id, depth=(self.depth+1), sender=self.id)
 
     def receive_prepare(self, message):
         # if here is P2's terminal now:
         # Receive from P1: PREPARE <1,P1>
-        print(f"Receive from {message['ballot_num_id']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}>")
+        print(f"Receive from {message['ballot_num_id']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> depth={message['depth']}")
         # msg is dict() type
         if message['ballot_num'] >= self.ballot_num or \
             ((message['ballot_num'] == self.ballot_num and int(message['ballot_num_id'][1:]) > int(self.id[1:]))):
-            self.ballot_num = message['ballot_num']
-            self.ballot_num_id = message['ballot_num_id']
+            if message['depth'] == (self.depth + 1):
+                self.ballot_num = message['ballot_num']
+                self.ballot_num_id = message['ballot_num_id']
 
-            print(f"{self.id} sending back to {message['ballot_num_id']}: {PROMISE} <{self.ballot_num},{self.ballot_num_id}> <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> {self.accepted_value}")
-            return Message(PROMISE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id,
-                            accepted_num=self.accepted_ballot_num, accepted_num_id=self.accepted_ballot_num_id,
-                            accepted_val=self.accepted_value,
-                            sender=self.id)
+                print(f"{self.id} sending back to {message['ballot_num_id']}: {PROMISE} <{self.ballot_num},{self.ballot_num_id}> <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> {self.accepted_value} depth={(self.depth+1)}")
+                return Message(PROMISE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id, depth=(self.depth + 1),
+                                accepted_num=self.accepted_ballot_num, accepted_num_id=self.accepted_ballot_num_id,
+                                accepted_val=self.accepted_value,
+                                sender=self.id)
+            else:
+                print(f"message['depth']: {message['depth']}, (self.depth + 1): {(self.depth + 1)}")
+                return None  # reject
         else:
             return None  # reject
 
-    def update_my_accepted_value(self, highest_b_message=None, accepted_ballot_num=None, accepted_ballot_num_id=None):
-        if highest_b_message == None and accepted_ballot_num == None and accepted_ballot_num_id == None:
-            self.ballot_num_id = self.id
-            self.accepted_ballot_num = self.ballot_num
-            self.accepted_ballot_num_id = self.id
+    def update_my_accepted_value(self, highest_b_message=None):
+        self.ballot_num_id = self.id
+        self.accepted_ballot_num = self.ballot_num
+        self.accepted_ballot_num_id = self.id
+        if highest_b_message == None:
             self.accepted_value = self.proposal # it's a list here
         else:
-            self.accepted_ballot_num = accepted_ballot_num
-            self.accepted_ballot_num_id = accepted_ballot_num_id
             self.accepted_value = highest_b_message
 
     def received_majority_promise(self): # TODO:need to add more
-        print(f"{self.id} sent: {ACCEPT} <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> '{self.get_proposal()}'")
-        return Message(ACCEPT, accepted_num=self.accepted_ballot_num, accepted_num_id=self.accepted_ballot_num_id, accepted_val=self.get_proposal(), sender=self.id)
-        # P1 will receive from all other servers PROMISE msg.
-        # eg: Received from P5: PROMISE <1,P1> None None
-        # print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['id']}> {message['accepted_num']} {message['accepted_val']}")
-        # if message['ballot_num'] >= self.ballot_num:
-        #     if message.get_accept_val() is not None:
-        #         if self.accepted_num is None or message.get_accepted_num() > self.accepted_num:
-        #             self.accepted_num = message.get_accepted_num()
-        #             self.accepted_value = message.get_accept_val()
-        # else:
-        #     return None # reject, need check
+        print(f"{self.id} sent: {ACCEPT} <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> '{self.get_proposal()}' depth={(self.depth+1)}")
+        return Message(ACCEPT, accepted_num=self.accepted_ballot_num,
+                        accepted_num_id=self.accepted_ballot_num_id,
+                        depth=(self.depth+1), accepted_val=self.get_proposal(), sender=self.id)
 
     def leader_send_accept(self,request):
-        print(f"{self.id} sent: {ACCEPT} <{self.ballot_num},{self.ballot_num_id}> '{request}'")
-        return Message(ACCEPT, accepted_num=self.ballot_num, accepted_num_id=self.ballot_num_id, accepted_val=request, sender=self.id)
+        print(f"{self.id} sent: {ACCEPT} <{self.ballot_num},{self.ballot_num_id}> '{request}' depth={(self.depth+1)}")
+        return Message(ACCEPT, depth=(self.depth+1), accepted_num=self.ballot_num, accepted_num_id=self.ballot_num_id,
+                        accepted_val=request, sender=self.id)
     
     def received_majority_accepted(self,accepted_value=None):
-        if accepted_value is not None:
-            self.accepted_value = accepted_value
-        print(f"{self.id} sent: {DECIDE} <{self.ballot_num},{self.ballot_num_id}> '{self.accepted_value}'")
-        return Message(DECIDE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id, accepted_val=self.accepted_value, sender=self.id)
+        # if accepted_value is not None:
+            # self.accepted_value = accepted_value # set self.accepted_value = 0
+        print(f"{self.id} sent: {DECIDE} <{self.ballot_num},{self.ballot_num_id}> '{self.accepted_value}' depth={self.depth}")
+        return Message(DECIDE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id,
+                        depth=self.depth, accepted_val=self.accepted_value, sender=self.id)
 
-    def receive_accept(self, message):
-        print(f"Receive from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']}")
+    def receive_accept(self, message): # non-leader receive accept
+        print(f"Receive from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']} depth={message['depth']}")
         if message['accepted_num'] >= self.ballot_num or \
             ((message['accepted_num'] == self.ballot_num and int(message['accepted_num_id'][1:]) > int(self.id[1:]))):
-            self.ballot_num = message['accepted_num']
-            self.ballot_num_id = message["accepted_num_id"]
-            self.accepted_ballot_num = message['accepted_num']
-            self.accepted_ballot_num_id = message['accepted_num_id']
-            self.accepted_value = message['accepted_val']
-            # print(f"{self.id} sending back to {message['id']}: {PROMISE} <{self.ballot_num},{self.accepted_num_id}> {self.accepted_ballot_num} {self.accepted_value}")
-            print(f"{self.id} sending back to {message['sender']}: {ACCEPTED} <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> '{self.accepted_value}'")
-            return Message(ACCEPTED, accepted_num=self.accepted_ballot_num, accepted_num_id=self.accepted_ballot_num_id, accepted_val=self.accepted_value, sender=self.id)
+            if message['depth'] == (self.depth + 1):
+                self.ballot_num = message['accepted_num']
+                self.ballot_num_id = message["accepted_num_id"]
+                self.accepted_ballot_num = message['accepted_num']
+                self.accepted_ballot_num_id = message['accepted_num_id']
+                self.accepted_value = message['accepted_val']
+                print(f"{self.id} sending back to {message['sender']}: {ACCEPTED} <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> '{self.accepted_value}' depth={(self.depth + 1)}")
+                return Message(ACCEPTED, accepted_num=self.accepted_ballot_num,depth=(self.depth+1),
+                                accepted_num_id=self.accepted_ballot_num_id, accepted_val=self.accepted_value, sender=self.id)
+            else:
+                print(f"message['depth']: {message['depth']}, (self.depth + 1): {(self.depth + 1)}")
+                return None # reject
         else:
             return None  # reject
     

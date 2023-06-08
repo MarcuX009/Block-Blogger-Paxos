@@ -37,7 +37,7 @@ class Server:
         self.promise_all_val = []
         self.promises = {}
         self.ImAleader = False
-        self.curr_leader = ''
+        self.curr_leader = None
         self.prev_leader = ''
         self.serverQueue = Queue.Queue()
         self.paxosQueue = Queue.Queue()
@@ -111,11 +111,14 @@ class Server:
                 else:
                     # send PERPARE with BallotNumber
                     self.receiceNum = 0
-                    if self.curr_leader == '': # if curr leader is empty
+                    self.promise_all_val = []
+                    self.promises = {}
+
+                    if self.curr_leader == None: # if curr leader is empty
                         self.Paxos.add_proposal(user_input)
                         message_dict = self.Paxos.prepare().to_dict()
                         message_json = json.dumps(message_dict)
-                        self.broadcast_message(message_json)
+                        self.broadcast_message(message_json) # sending PREPARE
                     else: # if curr leader is not empty
                         if self.curr_leader == self.name: # if it's ourself
                             # TODO:
@@ -176,111 +179,116 @@ class Server:
                 message_json = client.recv(1024).decode('utf-8')
                 if message_json:  # Check if the message is not empty
                     message = json.loads(message_json)
-                    # print(type(message)) # it's dict here
+                    print(f"\nThe type of received msg: {type(message)}") # it's dict here
                     # print(f"Received in client.py: {message}")
                     if message["msg_type"] == "POST":
                         if self.curr_leader == self.name:
                         # know my self is leader, and others know myself is leader
+                            self.receiceNum = 0
+                            self.promise_all_val = []
+                            self.promises = {}
                             self.serverQueue.append(message["msg_to_leader"])
-                            self.Paxos.add_proposal(user_input)
-                            message_dict = self.Paxos.prepare().to_dict()
-                            message_json = json.dumps(message_dict)
-                            self.broadcast_message(message_json)
                         else:
                         #if leader is not self, redirect the message to the known leader again
                             msgToLeader = MultiPaxos.Message(msg_type=message["msg_type"], msg_to_leader=message["msg_to_leader"], sender=self.name)
                             self.broadcast_msg_to(self.curr_leader, msgToLeader)
                             
-                    elif message["msg_type"] == "PREPARE":
+                    elif message["msg_type"] == "PREPARE": #  non-leader handling
+                        # print this msg's content, and return a PROMISE msg to be pre_PROMISE_msg
                         pre_PROMISE_msg = self.Paxos.receive_prepare(message)
                         # print(f"Received in client.py: {pre_PROMISE_msg.id}")
                         if pre_PROMISE_msg is not None: # if not rejected
                             pre_PROMISE_dict = pre_PROMISE_msg.to_dict()
                             message_json = json.dumps(pre_PROMISE_dict)
+                            # send PROMISE to leader
                             self.broadcast_msg_to(id=pre_PROMISE_dict['ballot_num_id'], message=message_json)
                             # set the sender to curr_leader
                             self.curr_leader =  message['sender']
 
                     elif message["msg_type"] == "PROMISE": # Phase two: handling all promise msg
-                        print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']}")
-                        
+                        print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']} depth={message['depth']}")
                         self.receiceNum += 1
-                        self.promise_all_val.append(message['accepted_val'])
+                        self.promise_all_val.append(message['accepted_val']) # used to check if all received msg is all None
                         self.promises[message['sender']] = message
                         if self.receiceNum >= (len(self.peers)-1) / 2:  # More than half peers/majority responded
-                            self.curr_leader = self.n
+                            print("Received majority promise and enter critical situatuion")
                             self.receiceNum = -999
+                            
+                            # set myself to be a leader:
+                            self.curr_leader = self.name
+                            
                             # print(f"before chceking if all None, receiceNum={self.receiceNum}")
                             if all(x is None for x in self.promise_all_val):
                                 # print("im here1")
                                 # myVal = initial_value
                                 self.Paxos.update_my_accepted_value()
-                                # send to all 
+                                # send ACCEPT to all 
                                 message_dict = self.Paxos.received_majority_promise().to_dict()
                                 message_json = json.dumps(message_dict)
                                 self.broadcast_message(message_json)
                                 self.promise_all_val = []
                                 self.promises = {}
-                                # set myself to be a leader:
-                                self.curr_leader = self.Paxos.get_id()
-                            else: # TODO: need to handle here
+                                
+                            else: # check who's accepted value is the largest one
                                 print("goes into the else case")
-                                # max(all massage(class) in this dict(), x)
-                                # print("im here2")
-                                # temp_id = self.Paxos.id
-                                # self.promises[temp_id] = MultiPaxos.Message("PROMISE", ballot_num=self.Paxos.ballot_num, ballot_num_id=self.Paxos.ballot_num_id,
-                                #                         accepted_num=self.Paxos.accepted_ballot_num, accepted_num_id=self.Paxos.accepted_ballot_num_id,
-                                #                         accepted_val=self.Paxos.accepted_value, sender=self.Paxos.id).to_dict()
+                                # find the largest accepted value's Massage
                                 highest_b_message = max(self.promises.values(), key=lambda m: m['accepted_num'])
                                 # print(highest_b_message)
-                                self.Paxos.update_my_accepted_value(highest_b_message['accepted_val'], self.Paxos.ballot_num, self.Paxos.id)
-                                # pre_ACCEPT_msg = self.Paxos.receive_promise(message)
+                                self.Paxos.update_my_accepted_value(highest_b_message['accepted_val'])
+                                
+                                # send ACCEPT to all 
+                                message_dict = self.Paxos.received_majority_promise().to_dict()
+                                message_json = json.dumps(message_dict)
+                                self.broadcast_message(message_json)
+                                self.promise_all_val = []
+                                self.promises = {}
                         else:
-                            pass
-                            # print(f"Not enough PROMISE, only have receiceNum={self.receiceNum}")
+                            print(f"waiting more PROMISE")
 
-                        # print(f"after chceking if all None, receiceNum={self.receiceNum}")  
                     elif message["msg_type"] == "ACCEPT": # Phase two: non-leader handling ACCEPT msg
                         # ACCEPT <1,P1> 'POST username title content'
                         msg = self.Paxos.receive_accept(message)
                         if msg is not None:
                             msg_in_dict= msg.to_dict()
                             message_json = json.dumps(msg_in_dict)
+                            # send ACCEPTED to leader
                             self.broadcast_msg_to(id=msg.accepted_num_id, message=message_json)
                         else:
                             print(f"I have a highter ballot num than {message['sender']}")
 
                     elif message["msg_type"] == "ACCEPTED":
-                        # ACCEPTED <1,P1> 'POST username title content'
-                        print(f"Received from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']}")
-                        print(f"current acceptnum counter :{self.acceptedNum}")
-                        self.acceptedNum += 1
-                        print(len(self.peers))
-                        if self.acceptedNum == (len(self.peers)-1) / 2:  # More than half peers/majority responded
+                        # ACCEPTED <1,P1> 'POST username title content' depth=x
+                        print(f"Received from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']} depth={message['depth']}")
+                        # print(f"\t\ttype: {type(message['depth'])}")
+                        
+                        if str(message['depth']) in ACCEPTED_counter_dict:
+                            ACCEPTED_counter_dict[str(message['depth'])] += 1
+                        else:
+                            ACCEPTED_counter_dict[str(message['depth'])] = 1
+
+                        print(f"current accepted num counter: {ACCEPTED_counter_dict[str(message['depth'])]}")
+                        # print(len(self.peers))
+                        if ACCEPTED_counter_dict[str(message['depth'])] == (len(self.peers)-1) / 2:  # More than half peers/majority responded
                             print("enter majority decide")
-                            
-                            #decide
-                            # TODO: decision
+                            self.Paxos.depth_increment() # depth += 1
+                            # create a new post to leader's block chain # TODO: create a new post blog class
                             self.create_new_post(message['accepted_val'])
-                            # send to all
-                            print() 
+                            # send DECIDE to all
                             message_dict = self.Paxos.received_majority_accepted().to_dict()
                             message_json = json.dumps(message_dict)
                             self.broadcast_message(message_json)
-                        
+
                             #delete 
                             self.Paxos.clear()
 
                     elif message["msg_type"] == "DECIDE":
                         # DECIDE <1,P1> 'POST username title content'
-                        print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> {message['accepted_val']}")
-                        # decision
+                        print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> {message['accepted_val']} depth={message['depth']}")
                         
+                        # create a new post to non-leader's block chain # TODO: create a new post blog class
                         self.create_new_post(message['accepted_val'])
-                        
+                        self.Paxos.depth += 1
                         self.Paxos.clear()
-
-
                     
                 # else:
                     # print("receive_messages() receive nothings")
@@ -327,13 +335,15 @@ class Server:
                 continue
             else:
                 if len(self.serverQueue) > 0:
-                    request = self.serverQueue.peek()
-                    self.serverQueue.pop(0)
+                    # request = self.serverQueue.returnFirst()
+                    request = self.serverQueue.pop(0)
+                    print(f"about to start handle the request:'{request}'")
                     self.handle_request(request)
                 sleep(0.1)
 
     def handle_request(self, request):
         # send to accept msg all
+        # self.Paxos.depth += 1
         message_dict = self.Paxos.leader_send_accept(request).to_dict()
         message_json = json.dumps(message_dict)
         self.broadcast_message(message_json)
@@ -342,7 +352,7 @@ class Server:
 
 ################      global      ################
 BC_Logs = []
-REPLIED = {}
+ACCEPTED_counter_dict = {}
 
 ################     __main__     ################
 if __name__ == '__main__':
