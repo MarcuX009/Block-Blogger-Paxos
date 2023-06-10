@@ -243,7 +243,8 @@ class Server:
                                 self.promise_all_val = []
                                 self.promises = {}
                         else:
-                            print(f"waiting more PROMISE")
+                            # print(f"waiting more PROMISE")
+                            pass
 
                     elif message["msg_type"] == "ACCEPT": # Phase two: non-leader handling ACCEPT msg
                         # ACCEPT <1,P1> 'POST username title content'
@@ -256,7 +257,7 @@ class Server:
                         else:
                             print(f"I have a highter ballot num than {message['sender']}")
 
-                    elif message["msg_type"] == "ACCEPTED":
+                    elif message["msg_type"] == "ACCEPTED": # leader phase
                         # ACCEPTED <1,P1> 'POST username title content' depth=x
                         print(f"Received from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']} depth={message['depth']}")
                         # print(f"\t\ttype: {type(message['depth'])}")
@@ -274,7 +275,7 @@ class Server:
                             # create a new post to leader's block chain # TODO: create a new post blog class
                             self.create_new_post(message['accepted_val'])
                             # send DECIDE to all
-                            message_dict = self.Paxos.received_majority_accepted().to_dict()
+                            message_dict = self.Paxos.received_majority_accepted(message['accepted_val']).to_dict()
                             message_json = json.dumps(message_dict)
                             self.broadcast_message(message_json)
 

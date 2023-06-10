@@ -31,6 +31,7 @@ class Message:
             'accepted_num': self.accepted_num,
             'accepted_num_id': self.accepted_num_id,
             'accepted_val': self.accepted_val,
+            'msg_to_leader': self.msg_to_leader,
             'sender': self.sender,
             'receiver': self.receiver
         }
@@ -126,19 +127,21 @@ class Paxos:
                         depth=(self.depth+1), accepted_val=self.get_proposal(), sender=self.id)
 
     def leader_send_accept(self,request):
+        self.ballot_num += 1
+        self.add_proposal(request)
         print(f"{self.id} sent: {ACCEPT} <{self.ballot_num},{self.ballot_num_id}> '{request}' depth={(self.depth+1)}")
         return Message(ACCEPT, depth=(self.depth+1), accepted_num=self.ballot_num, accepted_num_id=self.ballot_num_id,
-                        accepted_val=request, sender=self.id)
+                        accepted_val=self.get_proposal(), sender=self.id)
     
     def received_majority_accepted(self,accepted_value=None):
         # if accepted_value is not None:
             # self.accepted_value = accepted_value # set self.accepted_value = 0
-        print(f"{self.id} sent: {DECIDE} <{self.ballot_num},{self.ballot_num_id}> '{self.accepted_value}' depth={self.depth}")
+        print(f"{self.id} sent: {DECIDE} <{self.ballot_num},{self.ballot_num_id}> '{accepted_value}' depth={self.depth}")
         return Message(DECIDE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id,
-                        depth=self.depth, accepted_val=self.accepted_value, sender=self.id)
+                        depth=self.depth, accepted_val=accepted_value, sender=self.id)
 
     def receive_accept(self, message): # non-leader receive accept
-        print(f"Receive from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> {message['accepted_val']} depth={message['depth']}")
+        print(f"Receive from {message['sender']}: {message['msg_type']} <{message['accepted_num']},{message['accepted_num_id']}> '{message['accepted_val']}' depth={message['depth']}")
         if message['accepted_num'] >= self.ballot_num or \
             ((message['accepted_num'] == self.ballot_num and int(message['accepted_num_id'][1:]) > int(self.id[1:]))):
             if message['depth'] == (self.depth + 1):
