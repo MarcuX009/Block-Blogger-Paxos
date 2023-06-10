@@ -81,6 +81,10 @@ class Server:
                 sys.stdout.flush()
                 _exit(0)
 
+            elif user_input.split()[0] == "wait":
+                num_sec = int(user_input.split()[1])
+                sleep(num_sec)
+
             elif user_input.split()[0] == "show":
                 self.show_command()
                 sys.stdout.flush()
@@ -103,7 +107,7 @@ class Server:
                 print( f'[{bc_string[:-2]}]' )
                 sys.stdout.flush()
 
-            elif user_input.split()[0] == 'POST' or user_input.split()[0] == 'P':
+            elif user_input.split()[0] == 'POST':
             # message_tokens: POST username title content
                 if BC.check_if_post_exist(user_input.split()[1],user_input.split()[2]):
                     print("this author already has a post with the same title!")
@@ -120,14 +124,25 @@ class Server:
                         message_json = json.dumps(message_dict)
                         self.broadcast_message(message_json) # sending PREPARE
                     else: # if curr leader is not empty
-                        if self.curr_leader == self.name: # if it's ourself
-                            # TODO:
-                            # self.create_new_post(user_input)
+                        if self.curr_leader == self.name: # if curr_leader is ourself
                             # add the message to the server queue
                             self.serverQueue.append(user_input)
                         else: # if not ourself
-                            msgToLeader = MultiPaxos.Message(msg_type=user_input.split()[0], msg_to_leader=user_input.split(), sender=self.name)
-                            self.broadcast_msg_to(self.curr_leader, msgToLeader)
+                            msgToLeader = MultiPaxos.Message(msg_type=user_input.split()[0], msg_to_leader=user_input, sender=self.name)
+                            msgToLeader_dict = msgToLeader.to_dict()
+                            print(f"I am not the leader, sending this msg to leader {self.curr_leader}: {msgToLeader_dict['msg_to_leader']}")
+                            msgToLeader_json = json.dumps(msgToLeader_dict)
+                            self.broadcast_msg_to(self.curr_leader, msgToLeader_json)
+
+                            # if not self.broadcast_msg_to(self.curr_leader, msgToLeader_json):
+                            
+                            
+                            # x = time.start()
+                            # while() #
+                            # y = time.end()
+
+                            # period = y - x
+                            # if period > 5 second: ture
                    
             else:
                     print(f"{user_input}, wrong input")
@@ -167,6 +182,7 @@ class Server:
         except BrokenPipeError:
             print(f"{self.name}: Connection to P{id} lost.")
             del self.connections[id]
+            # return False
 
     def send_message(self, peer, message):
         # message = f"{self.name}: {message}"
@@ -269,15 +285,21 @@ class Server:
 
                         print(f"current accepted num counter: {ACCEPTED_counter_dict[str(message['depth'])]}")
                         # print(len(self.peers))
-                        if ACCEPTED_counter_dict[str(message['depth'])] == (len(self.peers)-1) / 2:  # More than half peers/majority responded
+                        sleep(2)
+                        if ACCEPTED_counter_dict[str(message['depth'])] >= (len(self.peers)-1) / 2:  # More than half peers/majority responded
+                            
+                            ACCEPTED_counter_dict[str(message['depth'])] = -999
+                            
                             print("enter majority decide")
                             self.Paxos.depth_increment() # depth += 1
-                            # create a new post to leader's block chain # TODO: create a new post blog class
-                            self.create_new_post(message['accepted_val'])
+                            
                             # send DECIDE to all
                             message_dict = self.Paxos.received_majority_accepted(message['accepted_val']).to_dict()
                             message_json = json.dumps(message_dict)
                             self.broadcast_message(message_json)
+
+                            # create a new post to leader's block chain # TODO: create a new post blog class
+                            self.create_new_post(message['accepted_val'])
 
                             #delete 
                             self.Paxos.clear()
