@@ -100,7 +100,7 @@ class Paxos:
                 self.ballot_num = message['ballot_num']
                 self.ballot_num_id = message['ballot_num_id']
 
-                print(f"{self.id} sending back to {message['ballot_num_id']}: {PROMISE} <{self.ballot_num},{self.ballot_num_id}> <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> {self.accepted_value} depth={(self.depth+1)}")
+                print(f"{self.id} sending back to {message['ballot_num_id']}: {PROMISE} <{self.ballot_num},{self.ballot_num_id}> <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> accepted_value={self.accepted_value} depth={(self.depth+1)}")
                 return Message(PROMISE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id, depth=(self.depth + 1),
                                 accepted_num=self.accepted_ballot_num, accepted_num_id=self.accepted_ballot_num_id,
                                 accepted_val=self.accepted_value,
