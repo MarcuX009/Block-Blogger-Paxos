@@ -1,5 +1,7 @@
+# CS171 Final Project, June 2023
 # BlockChain.py
-# Author: Wenjin Li
+# Author: Wenjin Li, An Cao
+
 import hashlib
 
 class Log:
