@@ -93,44 +93,26 @@ if __name__  == '__main__':
     # POST BananaMan How_to_be_a_Banana theSecretIsEatingMoreBanana
     # POST CXK Aiyoooo JJJJJJJJ
     blog = Blog()
-    post1 = Post('Marcus','Answer for the final exam', 'ABCDEFG')
-    post2 = Post('CXK', 'JNTM', 'one_more_look_then_boom')
-    post3 = Post('white55kai', "55kai's_answer", '8910JQKA')
-    post4 = Post('CXK','JNTM2', 'NiGanMa_AiYo')
-    post5 = Post('BananaMan','How_to_be_a_Banana', 'theSecretIsEatingMoreBanana')
-    post6 = Post('CXK','Aiyoooo', 'JJJJJJJJ')
-    blog.makeNewPost(post1)
-    blog.makeNewPost(post2)
-    blog.makeNewPost(post3)
-    blog.makeNewPost(post4)
-    blog.makeNewPost(post5)
-    blog.makeNewPost(post6)
+    blog.makeNewPost(Post('Marcus','Answer for the final exam', 'ABCDEFG'))
+    blog.makeNewPost(Post('CXK', 'JNTM', 'one_more_look_then_boom'))
+    blog.makeNewPost(Post('white55kai', "55kai's_answer", '8910JQKA'))
+    blog.makeNewPost(Post('CXK','JNTM2', 'NiGanMa_AiYo'))
+    blog.makeNewPost(Post('BananaMan','How_to_be_a_Banana', 'theSecretIsEatingMoreBanana'))
+    blog.makeNewPost(Post('CXK','Aiyoooo', 'JJJJJJJJ'))
     # print(blog)
     blog.view_all_posts()
 
-    # post1.add_comment(follower="bob",new_content="good post!")
-    # post1.add_comment(follower="pop",new_content="good post!!")
-    # post1.add_comment(follower="opo",new_content="good post!!!")
-    # post1.get_comment()
-
-
+    blog.get_post(('CXK', 'JNTM')).add_comment(follower="bob",new_content="good post!")
     
-    # try:
-    #     blog.get_post(('bob','title bob')).add_comment(follower="Marcus", new_content="goood!")
-    # except Exception as e:
-    #     print("Double the author and title again!!!\n")
-        
-    # try:
-    #     blog.get_post(('bob','title 2ob')).add_comment(follower="Marcus", new_content="goood!")
-    # except Exception as e:
-    #     print("Double the author and title again!!!\n")
-
-
-    # blog.get_post(('bob','title bob')).get_comment()
-
-
-
+    try:
+        blog.get_post(('CXK', 'JNTM222')).add_comment(follower="Marcus", new_content="goood!")
+    except Exception as e:
+        print("Double the author and title again!!!\n")
+    
     blog.get_posts_by_author("CXK")
     blog.get_posts_by_author("asda")
+    
+    blog.get_post(('CXK', 'JNTM')).get_comment()
+    
     print("Done!")
 
