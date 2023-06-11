@@ -77,8 +77,7 @@ class Server:
 
     def read_commands(self):
         while True:
-            # message = input()
-            # self.broadcast_message(message)
+
             user_input = input()
             if user_input == '':
                 continue
@@ -140,10 +139,14 @@ class Server:
                             msgToLeader_dict = msgToLeader.to_dict()
                             print(f"I am not the leader, sending this msg to leader {self.curr_leader}: {msgToLeader_dict['msg_to_leader']}")
                             msgToLeader_json = json.dumps(msgToLeader_dict)
-                            self.broadcast_msg_to(self.curr_leader, msgToLeader_json)
-
-                            # if not self.broadcast_msg_to(self.curr_leader, msgToLeader_json):
-                            
+                            success = self.broadcast_msg_to(self.curr_leader, msgToLeader_json)
+                            if not success:
+                                print("The leader is down, trying to start the election phase now...")
+                                self.curr_leader = None
+                                self.Paxos.add_proposal(user_input)
+                                message_dict = self.Paxos.prepare().to_dict()
+                                message_json = json.dumps(message_dict)
+                                self.broadcast_message(message_json)
                             
                             # x = time.start()
                             # while() #
@@ -192,20 +195,29 @@ class Server:
         print(f"SUCCESS created a new post: {user_input}")
 
     def broadcast_message(self, message):
-        for peer, connection in self.connections.items():
+        for peer, connection in list(self.connections.items()):
             try:
                 self.send_message(peer, message)
             except BrokenPipeError:
                 print(f"{self.name}: Connection to {peer} lost.")
                 del self.connections[peer]
 
+    # def broadcast_msg_to(self, id, message):
+    #     try:
+    #         self.send_message(id, message)
+    #         return True
+    #     except BrokenPipeError:
+    #         print(f"{self.name}: Connection to {id} lost.")
+    #         del self.connections[id]
+    #         # return False
+
     def broadcast_msg_to(self, id, message):
         try:
-            self.send_message(id, message)
-        except BrokenPipeError:
-            print(f"{self.name}: Connection to P{id} lost.")
-            del self.connections[id]
-            # return False
+            self.connections[id].send(message.encode('utf-8'))
+            return True
+        except Exception as e:
+            print(f"Failed to send message to {id}. Reason: {str(e)}")
+            return False
 
     def send_message(self, peer, message):
         # message = f"{self.name}: {message}"
@@ -367,6 +379,26 @@ class Server:
                 self.connect_to_peer(peer)
             sleep(2)
             # print("trying to reconnecting to other peer")
+    # def check_peer_alive(self, peer):
+    #     try:
+    #         self.connections[peer].send("HEARTBEAT".encode('utf-8'))
+    #         return True
+    #     except Exception as e:
+    #         print(f"Failed to send heartbeat to {peer}. Reason: {str(e)}")
+    #         return False
+        
+    # def connect_to_peers(self):
+    #     while True:
+    #         for peer in self.peers:
+    #             if not self.check_peer_alive(peer):  # check if peer is alive
+    #                 print(f"Connection to {peer} lost.")
+    #                 if peer == self.curr_leader:  # if the lost peer was the leader
+    #                     print(f"The leader {peer} is down, trying to start the election phase now...")
+    #                     self.curr_leader = None  # set current leader to None
+    #                     # self.start_new_election()  # implement this method to start a new election
+    #             sleep(2)
+
+    
 
     def show_command(self):
         print("POST username title content")
@@ -419,8 +451,11 @@ if __name__ == '__main__':
     port = 9000 + ['P1', 'P2', 'P3', 'P4', 'P5'].index(client_name)
     server = Server(port=port)
     server.start()
-    threading.Thread(target=server.connect_to_peers, args=()).start()
+    
     # create a new thread to handle the operations stored in the queue
     threading.Thread(target=server.handle_queue, args=()).start()
     # server.print_ports_dict()
     print(f"{server.name}: I have finished setting up the server!")
+
+    sleep(5)
+    threading.Thread(target=server.connect_to_peers, args=()).start()
