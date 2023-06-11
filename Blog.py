@@ -86,17 +86,25 @@ class Blog:
 
 
 if __name__  == '__main__':
+    # POST Marcus Answer_for_the_final_exam ABCDEFG
+    # POST CXK JNTM one_more_look_then_boom
+    # POST white55kai 55kai's_answer 8910JQKA
+    # POST CXK JNTM2 NiGanMa_AiYo
+    # POST BananaMan How_to_be_a_Banana theSecretIsEatingMoreBanana
+    # POST CXK Aiyoooo JJJJJJJJ
     blog = Blog()
     post1 = Post('Marcus','Answer for the final exam', 'ABCDEFG')
-    post2 = Post('bob','title bob', 'cotent from bob')
-    post3 = Post('Marcus','Answer2 for the final exam', 'ZXCVB')
-    post4 = Post('Marcus','Answer3 for the final exam', 'BMNJL')
-    post5 = Post('Marcus','Answer3 for the final exam', 'BMNJL')
+    post2 = Post('CXK', 'JNTM', 'one_more_look_then_boom')
+    post3 = Post('white55kai', "55kai's_answer", '8910JQKA')
+    post4 = Post('CXK','JNTM2', 'NiGanMa_AiYo')
+    post5 = Post('BananaMan','How_to_be_a_Banana', 'theSecretIsEatingMoreBanana')
+    post6 = Post('CXK','Aiyoooo', 'JJJJJJJJ')
     blog.makeNewPost(post1)
     blog.makeNewPost(post2)
     blog.makeNewPost(post3)
     blog.makeNewPost(post4)
     blog.makeNewPost(post5)
+    blog.makeNewPost(post6)
     # print(blog)
     blog.view_all_posts()
 
@@ -122,7 +130,7 @@ if __name__  == '__main__':
 
 
 
-    blog.get_posts_by_author("Marcus")
+    blog.get_posts_by_author("CXK")
     blog.get_posts_by_author("asda")
     print("Done!")
 
