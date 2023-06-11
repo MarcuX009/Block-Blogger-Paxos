@@ -31,16 +31,21 @@ class Server:
         self.peers = ['P1', 'P2', 'P3', 'P4', 'P5']
         self.ports = {peer: 9000 + i for i, peer in enumerate(self.peers)}
         self.name = [peer for peer, port in self.ports.items() if port == self.port][0]
+        
         self.Paxos = MultiPaxos.Paxos(id=self.name)
+        self.Blog = Blog.Blog()
+
         self.receiceNum = 0
         self.acceptedNum = 0
         self.promise_all_val = []
         self.promises = {}
-        self.ImAleader = False
+        
+        self.ImAleader = False # not used yet
         self.curr_leader = None
-        self.prev_leader = ''
+        self.prev_leader = '' # not used yet
+        
         self.serverQueue = Queue.Queue()
-        self.paxosQueue = Queue.Queue()
+        self.paxosQueue = Queue.Queue() # not used yet
 
     def print_ports_dict(self):
         print(f'{self.ports}')
@@ -75,6 +80,9 @@ class Server:
             # message = input()
             # self.broadcast_message(message)
             user_input = input()
+            if user_input == '':
+                continue
+
             if user_input.split()[0] == 'exit':
                 print("exiting...")
                 self.server.close()
@@ -143,7 +151,22 @@ class Server:
 
                             # period = y - x
                             # if period > 5 second: ture
-                   
+            elif user_input.split()[0] == 'COMMENT':
+                # self.Blog.
+                pass
+
+            elif user_input.split()[0] == 'view' and user_input.split()[1] == 'all' and user_input.split()[2] == 'posts':
+                self.Blog.view_all_posts()
+            
+            elif user_input.split()[0] == 'view' and user_input.split()[1] == 'posts':
+                # view posts USERNAME
+                self.Blog.get_posts_by_author(user_input.split()[2])
+
+            elif user_input.split()[0] == 'view' and user_input.split()[1] == 'comments':
+                # view comments POST
+                # self.Blog.get_post(user_input.split()[2])
+                pass
+            
             else:
                     print(f"{user_input}, wrong input")
 
@@ -192,6 +215,8 @@ class Server:
     def receive_messages(self, client):
         while True:
             try:
+                # if client.recv(1024).decode('utf-8') == None:
+                #     print("received msg NONE")
                 message_json = client.recv(1024).decode('utf-8')
                 if message_json:  # Check if the message is not empty
                     message = json.loads(message_json)
@@ -300,6 +325,7 @@ class Server:
 
                             # create a new post to leader's block chain # TODO: create a new post blog class
                             self.create_new_post(message['accepted_val'])
+                            self.Blog.makeNewPost(Blog.Post(message['accepted_val'].split()[1], message['accepted_val'].split()[2], message['accepted_val'].split()[3]))
 
                             #delete 
                             self.Paxos.clear()
@@ -310,6 +336,7 @@ class Server:
                         
                         # create a new post to non-leader's block chain # TODO: create a new post blog class
                         self.create_new_post(message['accepted_val'])
+                        self.Blog.makeNewPost(Blog.Post(message['accepted_val'].split()[1], message['accepted_val'].split()[2], message['accepted_val'].split()[3]))
                         self.Paxos.depth += 1
                         self.Paxos.clear()
                     
@@ -344,6 +371,9 @@ class Server:
     def show_command(self):
         print("POST username title content")
         print("COMMENT username title content")
+        print("view all posts")
+        print("view posts USERNAME")
+        print("view comments POST")
         print("info")
         print("exit")
         print("")
