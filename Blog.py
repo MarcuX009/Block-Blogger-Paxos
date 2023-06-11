@@ -1,6 +1,6 @@
 # CS171 Final Project, June 2023
 # Blog.py
-# Author: Wenjin Li
+# Author: Wenjin Li, An Cao
 
 class Post:
     def __init__(self, username, title, content):

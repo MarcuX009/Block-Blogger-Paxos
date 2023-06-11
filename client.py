@@ -1,6 +1,6 @@
 # CS171 Final Project, June 2023
 # client.py
-# Author: Wenjin Li
+# Author: Wenjin Li, An Cao
 
 import socket
 import sys

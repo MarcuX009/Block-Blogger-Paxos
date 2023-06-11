@@ -1,3 +1,7 @@
+# CS171 Final Project, June 2023
+# Queue.py
+# Author: Wenjin Li, An Cao
+
 class Queue:
     def __init__(self):
         self.requests = []
