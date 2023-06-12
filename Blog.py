@@ -74,8 +74,6 @@ class Blog:
         assert isinstance(authorNtitle, tuple)
 
         if authorNtitle not in self.blog_list:
-            print(f"Error, Post not found with: \
-                   '{authorNtitle[0]}', '{authorNtitle[1]}'")
             return False
         return True
 
