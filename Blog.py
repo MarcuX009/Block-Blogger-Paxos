@@ -70,6 +70,15 @@ class Blog:
             return
         return self.blog_list[authorNtitle]
 
+    def check_post_exist(self, authorNtitle):
+        assert isinstance(authorNtitle, tuple)
+
+        if authorNtitle not in self.blog_list:
+            print(f"Error, Post not found with: \
+                   '{authorNtitle[0]}', '{authorNtitle[1]}'")
+            return False
+        return True
+
     # def size(self):
         # return len(self.blog_list)
 
