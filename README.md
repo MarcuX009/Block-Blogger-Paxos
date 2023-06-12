@@ -1,18 +1,20 @@
-# FinalProjectCS171
+# CS171 Final Project, June 2023
+# Author: Wenjin Li, An Cao
 
 <H1>Commands</H1>
 
 |      Commands      |        Use for         |
 |:-------------------|:---------------------------------:|
-| Blockchain/BC   | show the BC in a list  |
+| BlockChain or BC   | show the BC in a list  |
 | exit               | close the server       |
 | wait x             | sleep for x second     |
 | (empty string)     | do nothing but continue|
+| info               | show all allowing input command |
 | exit               | close the current client|
-|:-------------------|:---------------------------------:|
-| Balance/B Px      | show client x's balance|
-| Transfer/T Px $y       | Transfer y amount to client x|
-| queue              | show the local queue   |
-| clock              | show the local LC time |
-| replies            | show the replies in all specific time|
+|--------------------|----------------------------------|
+| POST X Y Z         |  X=sername Y=title Z=content |
+| COMMENT X Y Z      | X=TagerUsername Y=TargetTitle Z=comment |
+| view all posts         | To view all posts   |
+| view posts X         | view all posts from X=TagerUsername   |
+| view comments X Y  | view all comments from X=TagerUsername Y=TargetTitle |
 
