@@ -155,8 +155,12 @@ class Server:
                             # period = y - x
                             # if period > 5 second: ture
             elif user_input.split()[0] == 'COMMENT':
-                # self.Blog.
-                pass
+                # message_tokens: COMMENT targetUsername targetTitle comments
+                authorNtitle = (user_input.split()[1], user_input.split()[2])
+                comment =user_input.split()[3]
+                if self.Blog.check_post_exist(authorNtitle):
+                    self.Blog.get_post(authorNtitle).add_comment(follower=self.name, new_content=comment)
+                # no need else, check_post_exist will print the not found msg
 
             elif user_input.split()[0] == 'view' and user_input.split()[1] == 'all' and user_input.split()[2] == 'posts':
                 self.Blog.view_all_posts()
@@ -166,9 +170,10 @@ class Server:
                 self.Blog.get_posts_by_author(user_input.split()[2])
 
             elif user_input.split()[0] == 'view' and user_input.split()[1] == 'comments':
-                # view comments POST
-                # self.Blog.get_post(user_input.split()[2])
-                pass
+                # view comments AUTHOR POST
+                authorNtitle = (user_input.split()[2], user_input.split()[3])
+                if self.Blog.check_post_exist(authorNtitle):
+                    self.Blog.get_post(authorNtitle).get_comment()
             
             else:
                     print(f"{user_input}, wrong input")
@@ -405,7 +410,7 @@ class Server:
         print("COMMENT username title content")
         print("view all posts")
         print("view posts USERNAME")
-        print("view comments POST")
+        print("view comments AUTHOR POST")
         print("info")
         print("exit")
         print("")
