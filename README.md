@@ -2,8 +2,6 @@
 <H2> Author: Wenjin Li, An Cao </H2>
 
 
-<H2>Commands</H2>
-
 |      Commands      |        Use for         |
 |:-------------------|:---------------------------------:|
 | BlockChain or BC   | show the BC in a list  |
