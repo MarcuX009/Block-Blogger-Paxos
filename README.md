@@ -1,7 +1,8 @@
-# CS171 Final Project, June 2023
-# Author: Wenjin Li, An Cao
+<H1> CS171 Final Project, June 2023</H1>
+<H2> Author: Wenjin Li, An Cao </H2>
 
-<H1>Commands</H1>
+
+<H2>Commands</H2>
 
 |      Commands      |        Use for         |
 |:-------------------|:---------------------------------:|
