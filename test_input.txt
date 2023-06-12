@@ -1,7 +1,16 @@
-POST Marcus Answer_for_the_final_exam ABCDEFG
+POST Marcus final_exam_answer ABCDEFG
 POST CXK JNTM one_more_look_then_boom
-POST white55kai 55kai's_answer 8910JQKA
+POST white55kai 55OPEN 8910JQKA
 POST CXK JNTM2 NiGanMa_AiYo
-POST BananaMan How_to_be_a_Banana theSecretIsEatingMoreBanana
+POST DaShiMa TriangleKill Q->F->R->Q
 POST CXK Aiyoooo JJJJJJJJ
-COMMENT white55kai 55kai's_answer BigAndLittleJoker
+
+
+view comments AUTHOR POST:
+COMMENT CXK JNTM i_am_Ikun
+COMMENT CXK JNTM ikun+1
+view comments CXK JNTM
+
+COMMENT white55kai 55OPEN BigAndLittleJoker
+COMMENT white55kai 55OPEN eatTheScreen
+view comments white55kai 55OPEN
