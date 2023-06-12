@@ -434,12 +434,14 @@ class Server:
             sleep(10)  # check every 10 seconds
 
     def show_command(self):
+        print("BlockChain or BC")
         print("POST username title content")
         print("COMMENT username title content")
         print("view all posts")
         print("view posts USERNAME")
         print("view comments AUTHOR POST")
         print("info")
+        print("wait x")
         print("exit")
         print("")
 
