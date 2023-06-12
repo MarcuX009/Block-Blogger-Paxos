@@ -114,53 +114,47 @@ class Server:
                 print( f'[{bc_string[:-2]}]' )
                 sys.stdout.flush()
 
-            elif user_input.split()[0] == 'POST':
+            elif user_input.split()[0] == 'POST' or user_input.split()[0] == 'COMMENT':
             # message_tokens: POST username title content
-                if BC.check_if_post_exist(user_input.split()[1],user_input.split()[2]):
-                    print("this author already has a post with the same title!")
+            # message_tokens: COMMENT targetUsername targetTitle comments
+                authorNtitle = (user_input.split()[1],user_input.split()[2])
                 
-                else:
-                    # send PERPARE with BallotNumber
-                    self.receiceNum = 0
-                    self.promise_all_val = []
-                    self.promises = {}
+                if user_input.split()[0] == 'COMMENT':
+                    user_input += f" {self.name}"
+                if user_input.split()[0] == 'POST' and self.Blog.check_post_exist(authorNtitle):
+                    print("this author already has a post with the same title!\n")
+                    continue
+                if user_input.split()[0] == 'COMMENT' and not self.Blog.check_post_exist(authorNtitle):
+                    print(f"Can't not comment. Post not found with:'{authorNtitle[0]}', '{authorNtitle[1]}'\n")
+                    continue
 
-                    if self.curr_leader == None: # if curr leader is empty
-                        self.Paxos.add_proposal(user_input)
-                        message_dict = self.Paxos.prepare().to_dict()
-                        message_json = json.dumps(message_dict)
-                        self.broadcast_message(message_json) # sending PREPARE
-                    else: # if curr leader is not empty
-                        if self.curr_leader == self.name: # if curr_leader is ourself
-                            # add the message to the server queue
-                            self.serverQueue.append(user_input)
-                        else: # if not ourself
-                            msgToLeader = MultiPaxos.Message(msg_type=user_input.split()[0], msg_to_leader=user_input, sender=self.name)
-                            msgToLeader_dict = msgToLeader.to_dict()
-                            print(f"I am not the leader, sending this msg to leader {self.curr_leader}: {msgToLeader_dict['msg_to_leader']}")
-                            msgToLeader_json = json.dumps(msgToLeader_dict)
-                            success = self.broadcast_msg_to(self.curr_leader, msgToLeader_json)
-                            if not success:
-                                print("The leader is down, trying to start the election phase now...")
-                                self.curr_leader = None
-                                self.Paxos.add_proposal(user_input)
-                                message_dict = self.Paxos.prepare().to_dict()
-                                message_json = json.dumps(message_dict)
-                                self.broadcast_message(message_json)
-                            
-                            # x = time.start()
-                            # while() #
-                            # y = time.end()
-
-                            # period = y - x
-                            # if period > 5 second: ture
-            elif user_input.split()[0] == 'COMMENT':
-                # message_tokens: COMMENT targetUsername targetTitle comments
-                authorNtitle = (user_input.split()[1], user_input.split()[2])
-                comment =user_input.split()[3]
-                if self.Blog.check_post_exist(authorNtitle):
-                    self.Blog.get_post(authorNtitle).add_comment(follower=self.name, new_content=comment)
-                # no need else, check_post_exist will print the not found msg
+                # send PERPARE with BallotNumber
+                self.receiceNum = 0
+                self.promise_all_val = []
+                self.promises = {}
+                if self.curr_leader == None: # if curr leader is empty
+                    self.Paxos.add_proposal(user_input)
+                    message_dict = self.Paxos.prepare().to_dict()
+                    message_json = json.dumps(message_dict)
+                    self.broadcast_message(message_json) # sending PREPARE
+                else: # if curr leader is not empty
+                    if self.curr_leader == self.name: # if curr_leader is ourself
+                        # add the message to the server queue
+                        self.serverQueue.append(user_input)
+                    else: # if not ourself
+                        msgToLeader = MultiPaxos.Message(msg_type=user_input.split()[0], msg_to_leader=user_input, sender=self.name)
+                        msgToLeader_dict = msgToLeader.to_dict()
+                        print(f"I am not the leader, sending this msg to leader {self.curr_leader}: {msgToLeader_dict['msg_to_leader']}")
+                        msgToLeader_json = json.dumps(msgToLeader_dict)
+                        success = self.broadcast_msg_to(self.curr_leader, msgToLeader_json)
+                        if not success:
+                            print("The leader is down, trying to start the election phase now...")
+                            self.curr_leader = None
+                            self.Paxos.add_proposal(user_input)
+                            message_dict = self.Paxos.prepare().to_dict()
+                            message_json = json.dumps(message_dict)
+                            self.broadcast_message(message_json)
+            
 
             elif user_input.split()[0] == 'view' and user_input.split()[1] == 'all' and user_input.split()[2] == 'posts':
                 self.Blog.view_all_posts()
@@ -179,14 +173,15 @@ class Server:
                     print(f"{user_input}, wrong input")
 
     def create_new_post(self,user_input):
+        if len(user_input.split()) == 5: blog_str = user_input.split()[:-1]
+        else: blog_str = user_input.split()
         hash_val = '0'*64
         if len(BC_Logs) > 0:
             hash_val = BC_Logs[-1].compute_block_hash()
         # blog_str = generate_send_string(sender, message_tokens[1], requested_amt)
-        blog_str = user_input.split()
+        
         new_blog_str = ''
-        for i in blog_str:
-            new_blog_str += i
+        for i in blog_str: new_blog_str += i
         right_nonce = BC.compute_nonce(f'{hash_val}{new_blog_str}')
         new_log = BC.Log(
             hash = hash_val,
@@ -197,7 +192,7 @@ class Server:
             nonce = right_nonce,
         )
         BC_Logs.append(new_log)
-        print(f"SUCCESS created a new post: {user_input}")
+        print(f"SUCCESS created a new log in BlockChain: {user_input}")
 
     def broadcast_message(self, message):
         for peer, connection in list(self.connections.items()):
@@ -232,14 +227,18 @@ class Server:
     def receive_messages(self, client):
         while True:
             try:
-                # if client.recv(1024).decode('utf-8') == None:
-                #     print("received msg NONE")
                 message_json = client.recv(1024).decode('utf-8')
+                # if not message_json:  # connection was closed
+                #         break
+                # if message == "HEARTBEAT" or message == "CHECK":  # received a heartbeat or check
+                #     continue
+                
                 if message_json:  # Check if the message is not empty
                     message = json.loads(message_json)
+                    
                     print(f"\nThe type of received msg: {type(message)}") # it's dict here
                     # print(f"Received in client.py: {message}")
-                    if message["msg_type"] == "POST":
+                    if message["msg_type"] == "POST" or message["msg_type"] == "COMMENT":
                         if self.curr_leader == self.name:
                         # know my self is leader, and others know myself is leader
                             self.receiceNum = 0
@@ -342,19 +341,44 @@ class Server:
 
                             # create a new post to leader's block chain # TODO: create a new post blog class
                             self.create_new_post(message['accepted_val'])
-                            self.Blog.makeNewPost(Blog.Post(message['accepted_val'].split()[1], message['accepted_val'].split()[2], message['accepted_val'].split()[3]))
 
-                            #delete 
+                            if message['accepted_val'].split()[0] == 'POST':
+                                self.Blog.makeNewPost(Blog.Post(message['accepted_val'].split()[1], message['accepted_val'].split()[2], message['accepted_val'].split()[3]))
+                                print(f"SUCCESS created a new POST in Blog: {message['accepted_val']}\n")
+
+                            if message['accepted_val'].split()[0] == 'COMMENT':
+                                authorNtitle = (message['accepted_val'].split()[1], message['accepted_val'].split()[2])
+                                comment = message['accepted_val'].split()[3]
+                                if self.Blog.check_post_exist(authorNtitle):
+                                    if not self.Blog.get_post(authorNtitle).check_comment_exist(message['accepted_val'].split()[1],message['accepted_val'].split()[3]):
+                                        self.Blog.get_post(authorNtitle).add_comment(follower=message['accepted_val'].split()[4], new_content=comment)
+                                    else:
+                                        print(f"Error! This comment already existed:\n\t{message['accepted_val'].split()[4]}: {comment}\n")
+                            # clear the cache
                             self.Paxos.clear()
 
                     elif message["msg_type"] == "DECIDE":
                         # DECIDE <1,P1> 'POST username title content'
                         print(f"Received from {message['sender']}: {message['msg_type']} <{message['ballot_num']},{message['ballot_num_id']}> {message['accepted_val']} depth={message['depth']}")
-                        
-                        # create a new post to non-leader's block chain # TODO: create a new post blog class
+                    
+                        # create a new post to non-leader's block chain
                         self.create_new_post(message['accepted_val'])
-                        self.Blog.makeNewPost(Blog.Post(message['accepted_val'].split()[1], message['accepted_val'].split()[2], message['accepted_val'].split()[3]))
+
+                        if message['accepted_val'].split()[0] == 'POST':    
+                            self.Blog.makeNewPost(Blog.Post(message['accepted_val'].split()[1], message['accepted_val'].split()[2], message['accepted_val'].split()[3]))
+                            print(f"SUCCESS created a new POST in Blog: {message['accepted_val']}\n")
+
+                        elif message['accepted_val'].split()[0] == 'COMMENT':
+                            authorNtitle = (message['accepted_val'].split()[1], message['accepted_val'].split()[2])
+                            comment = message['accepted_val'].split()[3]
+                            if self.Blog.check_post_exist(authorNtitle):
+                                if not self.Blog.get_post(authorNtitle).check_comment_exist(message['accepted_val'].split()[1],message['accepted_val'].split()[3]):
+                                        self.Blog.get_post(authorNtitle).add_comment(follower=message['accepted_val'].split()[4], new_content=comment)
+                                else:
+                                    print(f"Error! This comment already existed:\n\t{message['accepted_val'].split()[4]}: {comment}\n")
+                        
                         self.Paxos.depth += 1
+                        # clear the cache
                         self.Paxos.clear()
                     
                 # else:
@@ -383,27 +407,31 @@ class Server:
             for peer in self.peers:
                 self.connect_to_peer(peer)
             sleep(2)
-            # print("trying to reconnecting to other peer")
-    # def check_peer_alive(self, peer):
-    #     try:
-    #         self.connections[peer].send("HEARTBEAT".encode('utf-8'))
-    #         return True
-    #     except Exception as e:
-    #         print(f"Failed to send heartbeat to {peer}. Reason: {str(e)}")
-    #         return False
-        
-    # def connect_to_peers(self):
-    #     while True:
-    #         for peer in self.peers:
-    #             if not self.check_peer_alive(peer):  # check if peer is alive
-    #                 print(f"Connection to {peer} lost.")
-    #                 if peer == self.curr_leader:  # if the lost peer was the leader
-    #                     print(f"The leader {peer} is down, trying to start the election phase now...")
-    #                     self.curr_leader = None  # set current leader to None
-    #                     # self.start_new_election()  # implement this method to start a new election
-    #             sleep(2)
+    #         # print("trying to reconnecting to other peer")
 
+    def send_heartbeats(self):
+        while True:
+            for peer in self.connections.keys():
+                try:
+                    self.connections[peer].send("HEARTBEAT".encode('utf-8'))
+                except Exception as e:
+                    print(f"Failed to send heartbeat to {peer}. Reason: {str(e)}")
+            sleep(5)  # send a heartbeat every 5 seconds
     
+    def check_peers(self):
+        while True:
+            for peer in list(self.connections.keys()):
+                try:
+                    self.connections[peer].send("CHECK".encode('utf-8'))  # send a check message
+                    sleep(2)  # wait for a response
+                    self.connections[peer].recv(1024).decode('utf-8')  # try to receive a response
+                except Exception as e:  # failed to receive a response
+                    print(f"Lost connection to {peer}. Reason: {str(e)}")
+                    if peer == self.curr_leader:
+                        print(f"The leader {peer} is down, trying to start the election phase now...")
+                        self.curr_leader = None
+                    del self.connections[peer]  # remove the peer from the connections list
+            sleep(10)  # check every 10 seconds
 
     def show_command(self):
         print("POST username title content")
@@ -427,19 +455,16 @@ class Server:
                 if len(self.serverQueue) > 0:
                     # request = self.serverQueue.returnFirst()
                     request = self.serverQueue.pop(0)
-                    print(f"about to start handle the request:'{request}'")
+                    print(f"about to start handle the request: '{request}'")
                     self.handle_request(request)
                 sleep(0.1)
 
     def handle_request(self, request):
         # send to accept msg all
-        # self.Paxos.depth += 1
         message_dict = self.Paxos.leader_send_accept(request).to_dict()
         message_json = json.dumps(message_dict)
         self.broadcast_message(message_json)
-        # set myself to be a leader:
-        # self.curr_leader = self.Paxos.get_id()
-
+        
 ################      global      ################
 BC_Logs = []
 ACCEPTED_counter_dict = {}
@@ -464,3 +489,5 @@ if __name__ == '__main__':
 
     sleep(5)
     threading.Thread(target=server.connect_to_peers, args=()).start()
+    # threading.Thread(target=server.send_heartbeats).start()
+    # threading.Thread(target=server.check_peers).start()
