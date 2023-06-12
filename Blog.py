@@ -29,6 +29,11 @@ class Post:
             print(f"\t{each_comment[0]}: {each_comment[1]}") 
         print()
     
+    def check_comment_exist(self, follower, new_content):
+        if (follower,new_content) in self.comment:
+            return True
+        return False
+
     def add_comment(self, follower, new_content):
         if (follower,new_content) in self.comment:
             print(f"Error! This comment already existed:\n\t{follower}: {new_content}\n")
@@ -108,13 +113,25 @@ if __name__  == '__main__':
     blog.makeNewPost(Post('CXK','Aiyoooo', 'JJJJJJJJ'))
     # print(blog)
     blog.view_all_posts()
-
+    authorNtitle = ('CXK', 'JNTM')
+    print(type(authorNtitle))
+    if blog.check_post_exist(authorNtitle):
+        if not blog.get_post(authorNtitle).check_comment_exist(follower='No.1',new_content='ikun!'):
+                blog.get_post(authorNtitle).add_comment(follower='No.1', new_content='ikun!')
+                print(f"SUCCESS created a new COMMENT")
+        else:
+            print(f"Error! This comment already existed:\n")
+    if blog.check_post_exist(authorNtitle):
+        if not blog.get_post(authorNtitle).check_comment_exist(follower='No.1',new_content='ikun!'):
+                blog.get_post(authorNtitle).add_comment(follower='No.1', new_content='ikun!')
+                print(f"SUCCESS created a new COMMENT")
+        else:
+            print(f"Error! This comment already existed:\n")
+    
+    
+    blog.get_post(('CXK', 'JNTM')).add_comment(follower="bob",new_content="good post!")
     blog.get_post(('CXK', 'JNTM')).add_comment(follower="bob",new_content="good post!")
     
-    try:
-        blog.get_post(('CXK', 'JNTM222')).add_comment(follower="Marcus", new_content="goood!")
-    except Exception as e:
-        print("Double the author and title again!!!\n")
     
     blog.get_posts_by_author("CXK")
     blog.get_posts_by_author("asda")
