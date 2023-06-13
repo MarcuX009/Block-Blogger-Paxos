@@ -90,6 +90,10 @@ class Blog:
         return str(self.blog_list)
 
     def view_all_posts(self):
+        if len(self.blog_list.keys()) == 0:
+            print("\tBLOG EMPTY\n")
+            return
+        
         print("|author|-------|title|")
         for authorNtitle in self.blog_list:
             print(f"\t{authorNtitle[0]}-------{authorNtitle[1]}")
