@@ -423,7 +423,10 @@ class Server:
                 except BrokenPipeError:
                     print(f"{self.name}: Connection to {peer} lost.")
                     del self.connections[peer]
-            sleep(5) # 每10秒发送一次heartbeat
+                    if peer == self.curr_leader:
+                        print(f"The leader {peer} is down, next CLI will start the election phase now...")
+                        self.curr_leader = None
+            sleep(15) # 每15秒发送一次heartbeat
 
     def check_peers(self):
         while True:
