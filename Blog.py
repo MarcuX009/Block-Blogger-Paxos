@@ -1,6 +1,7 @@
 # CS171 Final Project, June 2023
 # Blog.py
 # Author: Wenjin Li, An Cao
+from ast import literal_eval
 
 class Post:
     def __init__(self, username, title, content):
@@ -14,6 +15,23 @@ class Post:
                    Title: {self.authorNtitle[1]}\n\
                  Content: {self.content}"
 
+    def to_dict(self):
+        comment_str = {str(k): v for k, v in self.comment.items()}
+        return {
+            'authorNtitle': self.authorNtitle,
+            'content': self.content,
+            'comment': comment_str
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        post = cls(*data['authorNtitle'], data['content'])
+        post.comment = {
+            literal_eval(key): value 
+            for key, value in data['comment'].items()
+        }
+        return post
+    
     def get_authorNtitle(self):
         return self.authorNtitle
     
@@ -43,6 +61,24 @@ class Post:
 class Blog:
     def __init__(self):
         self.blog_list = dict()
+
+    def to_dict(self):
+        blog_list_dict = {
+            authorNtitle: post.to_dict()
+            for authorNtitle, post in self.blog_list.items()
+        }
+        return {
+            'blog_list': blog_list_dict
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        blog = cls()
+        blog.blog_list = {
+            authorNtitle: Post.from_dict(post_data)
+            for authorNtitle, post_data in data['blog_list'].items()
+        }
+        return blog
 
     def makeNewPost(self, new_post):
         assert isinstance(new_post,Post)
