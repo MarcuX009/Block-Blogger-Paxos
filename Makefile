@@ -18,3 +18,15 @@ clear:
 	rm -f P3_log.txt
 	rm -f P4_log.txt
 	rm -f P5_log.txt
+	
+	rm -f P1_info.json
+	rm -f P2_info.json
+	rm -f P3_info.json
+	rm -f P4_info.json
+	rm -f P5_info.json
+	
+	rm -f P1_blog.json
+	rm -f P2_blog.json
+	rm -f P3_blog.json
+	rm -f P4_blog.json
+	rm -f P5_blog.json
