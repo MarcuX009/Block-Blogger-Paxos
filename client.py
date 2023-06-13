@@ -5,7 +5,6 @@
 import socket
 import sys
 import threading
-import time
 import json
 
 import BlockChain as BC
@@ -54,12 +53,9 @@ class Server:
         self.server.listen()
         print(f"{self.name}: Server started on port {self.port}")
         self.accept_connections_thread = threading.Thread(target=self.accept_connections).start()
-        # if checkpoint.txt able to open, and 
-            # self.curr_leader = [0]
-            # self.prev_leader = [1]
-        # else if txt, doesnt exist
-        
+
         self.command_thread = threading.Thread(target=self.read_commands).start()
+        self.heartbeat_thread = threading.Thread(target=self.send_heartbeat).start()  # 启动heartbeat线程
 
     def accept_connections(self):
         while True:
@@ -202,15 +198,6 @@ class Server:
                 print(f"{self.name}: Connection to {peer} lost.")
                 del self.connections[peer]
 
-    # def broadcast_msg_to(self, id, message):
-    #     try:
-    #         self.send_message(id, message)
-    #         return True
-    #     except BrokenPipeError:
-    #         print(f"{self.name}: Connection to {id} lost.")
-    #         del self.connections[id]
-    #         # return False
-
     def broadcast_msg_to(self, id, message):
         try:
             self.connections[id].send(message.encode('utf-8'))
@@ -224,21 +211,33 @@ class Server:
         message = f"{message}"
         self.connections[peer].send(message.encode('utf-8'))
 
+    def log_to_txt(self, message):
+        with open(f'{self.name}_log.txt','a') as file:
+            file.write(f"{message}\n")
+
     def receive_messages(self, client):
         while True:
             try:
                 message_json = client.recv(1024).decode('utf-8')
-                # if not message_json:  # connection was closed
-                #         break
-                # if message == "HEARTBEAT" or message == "CHECK":  # received a heartbeat or check
-                #     continue
-                
                 if message_json:  # Check if the message is not empty
                     message = json.loads(message_json)
-                    
-                    print(f"\nThe type of received msg: {type(message)}") # it's dict here
+                    # print(f"\nThe type of received msg: {type(message)}") # it's dict here # TEST USED
                     # print(f"Received in client.py: {message}")
-                    if message["msg_type"] == "POST" or message["msg_type"] == "COMMENT":
+                    self.log_to_txt(f"Received in client.py: {message}")
+
+                    if message["msg_type"] == "ping":
+                        data = {
+                            "msg_type": "pong",
+                            "sender": self.name
+                        }
+                        pong_message = json.dumps(data)
+                        self.send_message(message["sender"], pong_message)
+                    
+                    elif message["msg_type"] == "pong":
+                        # print(f"Pong, from {message['sender']}") # TEST USED
+                        pass
+
+                    elif message["msg_type"] == "POST" or message["msg_type"] == "COMMENT":
                         if self.curr_leader == self.name:
                         # know my self is leader, and others know myself is leader
                             self.receiceNum = 0
@@ -409,15 +408,23 @@ class Server:
             sleep(2)
     #         # print("trying to reconnecting to other peer")
 
-    def send_heartbeats(self):
+    def send_heartbeat(self):
         while True:
-            for peer in self.connections.keys():
+            for peer, connection in list(self.connections.items()):
                 try:
-                    self.connections[peer].send("HEARTBEAT".encode('utf-8'))
-                except Exception as e:
-                    print(f"Failed to send heartbeat to {peer}. Reason: {str(e)}")
-            sleep(5)  # send a heartbeat every 5 seconds
-    
+                    # 创建要发送的数据
+                    data = {
+                        "msg_type": "ping",
+                        "sender": self.name
+                    }
+                    # 将数据转换为 JSON 字符串
+                    message = json.dumps(data)
+                    self.send_message(peer, message)
+                except BrokenPipeError:
+                    print(f"{self.name}: Connection to {peer} lost.")
+                    del self.connections[peer]
+            sleep(5) # 每10秒发送一次heartbeat
+
     def check_peers(self):
         while True:
             for peer in list(self.connections.keys()):
@@ -456,7 +463,7 @@ class Server:
             else:
                 if len(self.serverQueue) > 0:
                     # request = self.serverQueue.returnFirst()
-                    request = self.serverQueue.pop(0)
+                    request = self.serverQueue.pop()
                     print(f"about to start handle the request: '{request}'")
                     self.handle_request(request)
                 sleep(0.1)
@@ -489,7 +496,5 @@ if __name__ == '__main__':
     # server.print_ports_dict()
     print(f"{server.name}: I have finished setting up the server!")
 
-    sleep(5)
+    sleep(1)
     threading.Thread(target=server.connect_to_peers, args=()).start()
-    # threading.Thread(target=server.send_heartbeats).start()
-    # threading.Thread(target=server.check_peers).start()
