@@ -144,7 +144,7 @@ class Server:
                         msgToLeader_json = json.dumps(msgToLeader_dict)
                         success = self.broadcast_msg_to(self.curr_leader, msgToLeader_json)
                         if not success:
-                            print("The leader is down, trying to start the election phase now...")
+                            print("The leader is down, trying to start the election phase...")
                             self.curr_leader = None
                             self.Paxos.add_proposal(user_input)
                             message_dict = self.Paxos.prepare().to_dict()
@@ -412,12 +412,10 @@ class Server:
         while True:
             for peer, connection in list(self.connections.items()):
                 try:
-                    # 创建要发送的数据
                     data = {
                         "msg_type": "ping",
                         "sender": self.name
                     }
-                    # 将数据转换为 JSON 字符串
                     message = json.dumps(data)
                     self.send_message(peer, message)
                 except BrokenPipeError:
@@ -426,7 +424,7 @@ class Server:
                     if peer == self.curr_leader:
                         print(f"The leader {peer} is down, next CLI will start the election phase now...")
                         self.curr_leader = None
-            sleep(15) # 每15秒发送一次heartbeat
+            sleep(15) # send heartbeat each 15 second
 
     def check_peers(self):
         while True:
