@@ -9,11 +9,11 @@ class Queue:
 
     def append(self, new_request):
         # verify the type of object you're getting - must be a tuple of two integers
-        assert isinstance(new_request, str)
+        # assert isinstance(new_request, str)
         
-        if len(new_request) == 4:
+        # if len(new_request) == 4:
             # that means we have a full (LC_time, LC_id, RECIPIENT, AMOUNT)
-            pass
+            # pass
 
         self.requests.append(new_request)
 
@@ -26,7 +26,7 @@ class Queue:
     def isEmpty(self):
         return len(self.new_request) == 0
 
-    def size(self):
+    def __len__(self):
         return len(self.requests)
     
     def pop(self):
