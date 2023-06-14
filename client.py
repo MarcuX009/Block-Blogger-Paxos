@@ -7,6 +7,8 @@ import sys
 import threading
 import json
 import os
+import time
+import random
 
 import BlockChain as BC
 import Blog
@@ -41,12 +43,9 @@ class Server:
         self.promise_all_val = []
         self.promises = {}
         
-        self.ImAleader = False # not used yet
         self.curr_leader = None
-        self.prev_leader = '' # not used yet
-        self.virgin_server = True # not used yet
+        self.virgin_server = True
         self.serverQueue = Queue.Queue()
-        self.paxosQueue = Queue.Queue() # not used yet
 
         #create a dictionary of the connection status of each peer (True/False)
         self.disconnect_flag = {
@@ -69,11 +68,17 @@ class Server:
             
             # delete the old log file
             if os.path.exists(f"{self.name}_BC.json"):
-                os.remove(f"{self.name}_BC.json")
+                # os.remove(f"{self.name}_BC.json")
+                with open(f"{self.name}_BC.json", 'w'):
+                    pass
             if os.path.exists(f"{self.name}_info.json"):
-                os.remove(f"{self.name}_info.json")
+                # os.remove(f"{self.name}_info.json")
+                with open(f"{self.name}_info.json", 'w'):
+                    pass
             if os.path.exists(f"{self.name}_blog.json"):
-                os.remove(f"{self.name}_blog.json")
+                # os.remove(f"{self.name}_blog.json")
+                with open(f"{self.name}_blog.json", 'w'):
+                    pass
             
         self.server.listen()
         print(f"{self.name}: Server started on port {self.port}")
@@ -81,7 +86,12 @@ class Server:
 
         self.command_thread = threading.Thread(target=self.read_commands).start()
         self.heartbeat_thread = threading.Thread(target=self.send_heartbeat).start()  # 启动heartbeat线程
-        sleep(8)
+        
+    def checking(self):
+        sleep(10)
+        self.command_thread = threading.Thread(target=self.ask_depth).start()
+
+    def ask_depth(self):
         if self.virgin_server == False:
             data = {
                 "msg_type": "new_depth?",
@@ -92,7 +102,6 @@ class Server:
             self.broadcast_message(depth_msg)
             print(f"{self.name}: I am asking others for the depth of the blockchain.")
             sys.stdout.flush()
-
 
     def accept_connections(self):
         while True:
@@ -135,6 +144,10 @@ class Server:
                 self.show_command()
                 sys.stdout.flush()
 
+            elif user_input.split()[0] == "queue":
+                print(self.serverQueue)
+                sys.stdout.flush()
+
             elif user_input.split()[0] == "info":
                 print(f"curr_leader is:{self.curr_leader}")
                 print(self.Paxos)
@@ -154,9 +167,14 @@ class Server:
             # fixLink(dest): restore the connection between the issuing process and the dest node
             elif user_input.split()[0] == "fixLink" or user_input.split()[0] == "fix":
                 dest = user_input.split()[1]
-                #self.fixLink(dest)
                 self.disconnect_flag[dest] = False
                 print(f"fixLink {dest} success")
+                # data = {
+                #     "msg_type": "check",
+                #     "sender": self.name
+                # }
+                # check_msg = json.dumps(data)
+                # self.broadcast_msg_to(id=dest, message=check_msg)
                 sys.stdout.flush()
 
             elif user_input.split()[0] == "BlockChain" or user_input.split()[0]== "BC":
@@ -283,7 +301,14 @@ class Server:
             try:
                 message_json = client.recv(1024).decode('utf-8')
                 if message_json:  # Check if the message is not empty
-                    message = json.loads(message_json)
+                    try:
+                        message = json.loads(message_json)
+                    except json.JSONDecodeError:
+                        # print(f'Failed to parse first JSON message: {message_json}')
+                        message_json = message_json.replace('}{', '}\n{')
+                        message = json.loads(message_json.split('\n', 1)[0])
+                        print(type(message))
+
                     # print(f"\nThe type of received msg: {type(message)}") # it's dict here # TEST USED
                     # print(f"Received in client.py: {message}")
                     self.log_to_txt(f"Received in client.py: {message}")
@@ -294,11 +319,15 @@ class Server:
                             "sender": self.name
                         }
                         pong_message = json.dumps(data)
-                        self.send_message(message["sender"], pong_message)
+                        try:
+                            self.send_message(message["sender"], pong_message)
+                        except Exception:
+                            pass
                     
                     elif message["msg_type"] == "pong":
                         # print(f"Pong, from {message['sender']}") # TEST USED
                         pass
+
                     elif message["msg_type"] == "new_depth?":
                         #find my own local log files that start with self.name and send back to the sender
                         print(f"Received 'new_depth?' from {message['sender']}") # TEST USED
@@ -321,6 +350,7 @@ class Server:
                             "blog_dict": blog_dict
                         }
                         new_depth_message = json.dumps(data)
+                        sleep(int(self.name[1:]))
                         self.send_message(message["sender"], new_depth_message)
 
                     elif message["msg_type"] == "new_depth!":
@@ -347,6 +377,18 @@ class Server:
                             blog_dict = message["blog_dict"]
                             blog_list = {literal_eval(key): Blog.Post.from_dict(post) for key, post in blog_dict.items()}
                             self.Blog.blog_list = blog_list
+
+                    elif message["msg_type"] == "check":
+                        data = {
+                            "msg_type": "new_depth?",
+                            "sender": self.name
+                        }
+                        depth_msg = json.dumps(data)
+                        print(f"my peer is peer{self.connections.keys()}")
+                        self.broadcast_message(depth_msg)
+                        print(f"{self.name}: I am asking others for the depth of the blockchain.")
+                        sys.stdout.flush()
+
                     elif message["msg_type"] == "POST" or message["msg_type"] == "COMMENT":
                         if self.curr_leader == self.name:
                         # know my self is leader, and others know myself is leader
@@ -643,11 +685,10 @@ class Server:
                 continue
             else:
                 if len(self.serverQueue) > 0:
-                    # request = self.serverQueue.returnFirst()
-                    request = self.serverQueue.pop()
+                    request = self.serverQueue.pop(0)
                     print(f"about to start handle the request: '{request}'")
                     self.handle_request(request)
-                sleep(0.1)
+                sleep(3)
 
     def handle_request(self, request):
         # send to accept msg all
@@ -674,8 +715,8 @@ if __name__ == '__main__':
     
     # create a new thread to handle the operations stored in the queue
     threading.Thread(target=server.handle_queue, args=()).start()
-    # server.print_ports_dict()
-    print(f"{server.name}: I have finished setting up the server!")
 
-    sleep(1)
     threading.Thread(target=server.connect_to_peers, args=()).start()
+
+    print(f"{server.name}: I have finished setting up the server!")
+    server.checking()
