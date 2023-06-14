@@ -645,6 +645,7 @@ class Server:
                         print(f"The leader {peer} is down, next CLI will start the election phase now...")
                         self.curr_leader = None
                         self.Paxos.clear()
+                        self.save()
             sleep(2) # send heartbeat each 15 second
 
     def check_peers(self):
