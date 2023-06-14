@@ -168,13 +168,14 @@ class Server:
             elif user_input.split()[0] == "fixLink" or user_input.split()[0] == "fix":
                 dest = user_input.split()[1]
                 self.disconnect_flag[dest] = False
+                sleep(8)
                 print(f"fixLink {dest} success")
-                # data = {
-                #     "msg_type": "check",
-                #     "sender": self.name
-                # }
-                # check_msg = json.dumps(data)
-                # self.broadcast_msg_to(id=dest, message=check_msg)
+                data = {
+                    "msg_type": "check",
+                    "sender": self.name
+                }
+                check_msg = json.dumps(data)
+                self.broadcast_msg_to(id=dest, message=check_msg)
                 sys.stdout.flush()
 
             elif user_input.split()[0] == "BlockChain" or user_input.split()[0]== "BC":
@@ -644,7 +645,7 @@ class Server:
                         print(f"The leader {peer} is down, next CLI will start the election phase now...")
                         self.curr_leader = None
                         self.Paxos.clear()
-            sleep(8) # send heartbeat each 15 second
+            sleep(2) # send heartbeat each 15 second
 
     def check_peers(self):
         while True:
