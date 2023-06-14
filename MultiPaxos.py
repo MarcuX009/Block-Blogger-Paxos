@@ -48,14 +48,7 @@ class Message:
         return self.accepted_num
     def get_accept_val(self):
         return self.accepted_val
-    
-# class Proposal:
-#     def __init__(self, operation, username, title, content):
-#         self.operation = operation
-#         self.username = username
-#         self.title = title
-#         self.content = content
-   
+
 class Paxos:
     def __init__(self, id):
         self.id = id #PID
@@ -76,7 +69,6 @@ class Paxos:
         return self.id
 
     def get_proposal(self):
-        # return f"{self.proposal.operation} {self.proposal.username} {self.proposal.title} {self.proposal.content}"
         return self.proposal
 
     def add_proposal(self, command):
@@ -121,7 +113,7 @@ class Paxos:
         else:
             self.accepted_value = highest_b_message
 
-    def received_majority_promise(self): # TODO:need to add more
+    def received_majority_promise(self):
         print(f"{self.id} sent: {ACCEPT} <{self.accepted_ballot_num},{self.accepted_ballot_num_id}> '{self.get_proposal()}' depth={(self.depth+1)}")
         return Message(ACCEPT, accepted_num=self.accepted_ballot_num,
                         accepted_num_id=self.accepted_ballot_num_id,
@@ -135,8 +127,6 @@ class Paxos:
                         accepted_val=self.get_proposal(), sender=self.id)
     
     def received_majority_accepted(self,accepted_value=None):
-        # if accepted_value is not None:
-            # self.accepted_value = accepted_value # set self.accepted_value = 0
         print(f"{self.id} sent: {DECIDE} <{self.ballot_num},{self.ballot_num_id}> '{accepted_value}' depth={self.depth}")
         return Message(DECIDE, ballot_num=self.ballot_num, ballot_num_id=self.ballot_num_id,
                         depth=self.depth, accepted_val=accepted_value, sender=self.id)
