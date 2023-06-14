@@ -6,6 +6,7 @@ import socket
 import sys
 import threading
 import json
+import os
 
 import BlockChain as BC
 import Blog
@@ -43,7 +44,7 @@ class Server:
         self.ImAleader = False # not used yet
         self.curr_leader = None
         self.prev_leader = '' # not used yet
-        
+        self.virgin_server = True # not used yet
         self.serverQueue = Queue.Queue()
         self.paxosQueue = Queue.Queue() # not used yet
 
@@ -60,12 +61,38 @@ class Server:
         print(f'{self.ports}')
 
     def start(self):
+        #check if this is the first time the server is started by check if the saved file is empty, if not set virgin to false
+        # check if {self.name}_info.json is empty
+        if os.path.exists(f"{self.name}_log.txt") and os.stat(f"{self.name}_log.txt").st_size != 0:
+            self.virgin_server = False
+            print(f"{self.name}: I am not a virgin server.")
+            
+            # delete the old log file
+            if os.path.exists(f"{self.name}_BC.json"):
+                os.remove(f"{self.name}_BC.json")
+            if os.path.exists(f"{self.name}_info.json"):
+                os.remove(f"{self.name}_info.json")
+            if os.path.exists(f"{self.name}_blog.json"):
+                os.remove(f"{self.name}_blog.json")
+            
         self.server.listen()
         print(f"{self.name}: Server started on port {self.port}")
         self.accept_connections_thread = threading.Thread(target=self.accept_connections).start()
 
         self.command_thread = threading.Thread(target=self.read_commands).start()
         self.heartbeat_thread = threading.Thread(target=self.send_heartbeat).start()  # 启动heartbeat线程
+        sleep(8)
+        if self.virgin_server == False:
+            data = {
+                "msg_type": "new_depth?",
+                "sender": self.name
+            }
+            depth_msg = json.dumps(data)
+            print(f"my peer is peer{self.connections.keys()}")
+            self.broadcast_message(depth_msg)
+            print(f"{self.name}: I am asking others for the depth of the blockchain.")
+            sys.stdout.flush()
+
 
     def accept_connections(self):
         while True:
@@ -80,7 +107,6 @@ class Server:
         print(f"{self.name}: {client_name} has connected with me.")
 
         threading.Thread(target=self.receive_messages, args=(client,)).start()
-
     def read_commands(self):
         global BC_Logs
         while True:
@@ -133,7 +159,7 @@ class Server:
                 print(f"fixLink {dest} success")
                 sys.stdout.flush()
 
-            elif user_input.split()[0] == "BlockChain" or user_input.split()[0] == "BC":
+            elif user_input.split()[0] == "BlockChain" or user_input.split()[0]== "BC":
                 if len(BC_Logs) == 0:
                     print("[]")
                     sys.stdout.flush()
@@ -252,6 +278,7 @@ class Server:
             file.write(f"{message}\n")
 
     def receive_messages(self, client):
+        global BC_Logs
         while True:
             try:
                 message_json = client.recv(1024).decode('utf-8')
@@ -272,7 +299,54 @@ class Server:
                     elif message["msg_type"] == "pong":
                         # print(f"Pong, from {message['sender']}") # TEST USED
                         pass
+                    elif message["msg_type"] == "new_depth?":
+                        #find my own local log files that start with self.name and send back to the sender
+                        print(f"Received 'new_depth?' from {message['sender']}") # TEST USED
+                        if not os.path.exists(f'{self.name}_BC.json'):
+                            return
+                        
+                        with open(f'{self.name}_BC.json', 'r') as file:
+                            bc_list = json.load(file) # it's a list of BC.Log objects
+                        with open(f'{self.name}_info.json', 'r') as file:
+                            server_info = json.load(file) # it's a dict
+                        with open(f'{self.name}_blog.json', 'r') as file:
+                            blog_dict = json.load(file) # it's a dict
+                        
+                        # put bc_list, server_info, blog_dict into a dict and send back to the sender
+                        data = {
+                            "msg_type": "new_depth!",
+                            "sender": self.name,
+                            "bc_list": bc_list,
+                            "server_info": server_info,
+                            "blog_dict": blog_dict
+                        }
+                        new_depth_message = json.dumps(data)
+                        self.send_message(message["sender"], new_depth_message)
 
+                    elif message["msg_type"] == "new_depth!":
+                        # recovery the received bc_list, server_info, blog_dict
+                        print(f"Received 'new_depth!' from {message['sender']}") # TEST USED
+                        # if the depth of received BC is deeper than self, update self's all files
+                        if int(message["server_info"]["depth"]) > self.Paxos.depth:
+                            # load the received bc_list
+                            bc_list= message["bc_list"]
+                            BC_Logs = [BC.Log(**log_dict) for log_dict in bc_list]
+
+                            # load the received server_info
+                            self.curr_leader = message["server_info"]['curr_leader']
+                            # Reconstructing the Paxos instance with saved state
+                            self.Paxos.ballot_num = message["server_info"]['ballot_num']
+                            self.Paxos.ballot_num_id = message["server_info"]['ballot_num_id']
+                            self.Paxos.depth = message["server_info"]['depth']
+                            self.Paxos.accepted_ballot_num = message["server_info"]['accepted_ballot_num']
+                            self.Paxos.accepted_ballot_num_id = message["server_info"]['accepted_ballot_num_id']
+                            self.Paxos.accepted_value = message["server_info"]['accepted_value']
+                            self.Paxos.proposal = message["server_info"]['proposal']
+                            
+                            # load the received blog_dict
+                            blog_dict = message["blog_dict"]
+                            blog_list = {literal_eval(key): Blog.Post.from_dict(post) for key, post in blog_dict.items()}
+                            self.Blog.blog_list = blog_list
                     elif message["msg_type"] == "POST" or message["msg_type"] == "COMMENT":
                         if self.curr_leader == self.name:
                         # know my self is leader, and others know myself is leader
@@ -528,7 +602,7 @@ class Server:
                         print(f"The leader {peer} is down, next CLI will start the election phase now...")
                         self.curr_leader = None
                         self.Paxos.clear()
-            sleep(15) # send heartbeat each 15 second
+            sleep(8) # send heartbeat each 15 second
 
     def check_peers(self):
         while True:
