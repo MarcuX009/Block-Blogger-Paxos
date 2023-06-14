@@ -124,10 +124,10 @@ class Server:
             if user_input == '':
                 continue
 
-            elif user_input == 'save':
+            elif user_input.split()[0] == 'save':
                 self.save()
 
-            elif user_input == 'load':
+            elif user_input.split()[0] == 'load':
                 self.load()
 
             elif user_input.split()[0] == 'exit':
