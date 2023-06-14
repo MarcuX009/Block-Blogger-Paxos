@@ -7,22 +7,22 @@ import hashlib
 class Log:
 	def __init__(self, hash, OP, username, title, content, nonce):
 		self.hash = hash
-		self._OP = OP
-		self._username = username
-		self._title = title
-		self._content = content
+		self.OP = OP
+		self.username = username
+		self.title = title
+		self.content = content
 		self.nonce = nonce
 	
 	def compute_block_hash(self):
 		sha = hashlib.sha256()
 		block_str = self.hash
-		block_str += generate_send_string(self._OP, self._username, self._title, self._content)
+		block_str += generate_send_string(self.OP, self.username, self.title, self.content)
 		block_str += str(self.nonce)
 		sha.update(block_str.encode('utf-8'))
 		return sha.hexdigest()
 	
 	def __str__(self):
-		return f'{self._OP} {self._username} {self._title} {self._content} {self.hash}'
+		return f'{self.OP} {self.username} {self.title} {self.content} {self.hash}'
 	
 	def __repr__(self):
 		return self.__str__()
@@ -32,7 +32,7 @@ def generate_send_string(OP, username, title, content):
 
 def check_if_post_exist(username, title):
     for log in Logs:
-        if log._username == username and log._title == title:
+        if log.username == username and log.title == title:
             return True
     return False
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 			# print('asked to print the entire blockchain')
 			bc_string = ""
 			for log in Logs:
-				each_log_str = f"{log._OP}, {log._username}, {log._title}, {log._content}, {log.hash}"
+				each_log_str = f"{log.OP}, {log.username}, {log.title}, {log.content}, {log.hash}"
 				bc_string += f"({each_log_str}), "
 			print( f'[{bc_string[:-2]}]' )
 			# sys.stdout.flush()
