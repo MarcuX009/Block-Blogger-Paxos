@@ -19,6 +19,12 @@ clear:
 	rm -f P4_log.txt
 	rm -f P5_log.txt
 	
+	rm -f P1_BC.json
+	rm -f P2_BC.json
+	rm -f P3_BC.json
+	rm -f P4_BC.json
+	rm -f P5_BC.json
+
 	rm -f P1_info.json
 	rm -f P2_info.json
 	rm -f P3_info.json
