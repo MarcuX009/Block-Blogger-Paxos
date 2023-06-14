@@ -47,6 +47,15 @@ class Server:
         self.serverQueue = Queue.Queue()
         self.paxosQueue = Queue.Queue() # not used yet
 
+        #create a dictionary of the connection status of each peer (True/False)
+        self.disconnect_flag = {
+            'P1': False,
+            'P2': False,
+            'P3': False,
+            'P4': False,
+            'P5': False
+        }
+
     def print_ports_dict(self):
         print(f'{self.ports}')
 
@@ -79,73 +88,12 @@ class Server:
             user_input = input()
             if user_input == '':
                 continue
-            # testing used, del later -start
+
             elif user_input == 'save':
-                # save the BC
-                # listed_blockchain = json.dumps(BC_Logs, default=lambda o: o.__dict__)
-                # with open(f'{self.name}_BC.json','w') as file:
-                #     file.write(listed_blockchain)
-                # print("SAVED BC")
-
-                # save the info
-                server_info = {
-                    'curr_leader': self.curr_leader,
-                    'id': self.Paxos.id,
-                    'ballot_num': self.Paxos.ballot_num,
-                    'ballot_num_id': self.Paxos.ballot_num_id,
-                    'depth': self.Paxos.depth,
-                    'accepted_ballot_num': self.Paxos.accepted_ballot_num,
-                    'accepted_ballot_num_id': self.Paxos.accepted_ballot_num_id,
-                    'accepted_value': self.Paxos.accepted_value,
-                    'proposal': self.Paxos.proposal
-                }
-                with open(f'{self.name}_info.json', 'w') as file:
-                    json.dump(server_info, file)
-                print("SAVED info")
-
-                # save the Blog class
-                with open(f'{self.name}_blog.json', 'w') as file:
-                    blog_dict = {str(key): post.to_dict() for key, post in self.Blog.blog_list.items()}
-                    json.dump(blog_dict, file)
-                print("SAVED blog")
+                self.save()
 
             elif user_input == 'load':
-                # load the BC
-                # bc_list = [log.__dict__ for log in Logs]
-                #     with open('blockchain.json','w') as file:
-                #         json.dump(bc_list, file)
-                #     print("SAVED BC")
-                # with open(f'{self.name}_BC.json','r') as file:
-                #     # json.load() reads the JSON data from the file
-                #     # while json.loads() reads JSON data from a string. 
-                #     BC_Logs = json.load(file)
-                # print("LOADED BC")
-
-                # load the info
-                with open(f'{self.name}_info.json', 'r') as file:
-                    server_info = json.load(file)
-
-                self.curr_leader = server_info['curr_leader']
-                # Reconstructing the Paxos instance with saved state
-                self.Paxos.id = server_info['id']
-                self.Paxos.ballot_num = server_info['ballot_num']
-                self.Paxos.ballot_num_id = server_info['ballot_num_id']
-                self.Paxos.depth = server_info['depth']
-                self.Paxos.accepted_ballot_num = server_info['accepted_ballot_num']
-                self.Paxos.accepted_ballot_num_id = server_info['accepted_ballot_num_id']
-                self.Paxos.accepted_value = server_info['accepted_value']
-                self.Paxos.proposal = server_info['proposal']
-                print("LOADED info")
-
-                # load the Blog class
-                with open(f'{self.name}_blog.json', 'r') as file:
-                    blog_dict = json.load(file)
-                blog_list = {literal_eval(key): Blog.Post.from_dict(post) for key, post in blog_dict.items()}
-                self.Blog.blog_list = blog_list
-                print("LOADED blog")
-
-
-            # testing used, del later - end
+                self.load()
 
             elif user_input.split()[0] == 'exit':
                 print("exiting...")
@@ -164,6 +112,25 @@ class Server:
             elif user_input.split()[0] == "info":
                 print(f"curr_leader is:{self.curr_leader}")
                 print(self.Paxos)
+                print("This server is connecting with: ", end="")
+                for key in self.connections.keys():
+                    print(f"{key} ", end="")
+                print()
+                sys.stdout.flush()
+
+            elif user_input.split()[0] == "failLink" or user_input.split()[0] == "fail":
+                dest = user_input.split()[1]
+                del self.connections[dest]
+                self.disconnect_flag[dest] = True
+                print(f"failLink {dest} success")
+                sys.stdout.flush()
+            
+            # fixLink(dest): restore the connection between the issuing process and the dest node
+            elif user_input.split()[0] == "fixLink" or user_input.split()[0] == "fix":
+                dest = user_input.split()[1]
+                #self.fixLink(dest)
+                self.disconnect_flag[dest] = False
+                print(f"fixLink {dest} success")
                 sys.stdout.flush()
 
             elif user_input.split()[0] == "BlockChain" or user_input.split()[0] == "BC":
@@ -174,7 +141,7 @@ class Server:
                 # print('asked to print the entire blockchain')
                 bc_string = ""
                 for log in BC_Logs:
-                    each_log_str = f"{log._OP}, {log._username}, {log._title}, {log._content}, {log.hash}"
+                    each_log_str = f"{log.OP}, {log.username}, {log.title}, {log.content}, {log.hash}"
                     bc_string += f"({each_log_str}), "
                 print( f'[{bc_string[:-2]}]' )
                 sys.stdout.flush()
@@ -276,9 +243,9 @@ class Server:
             return False
 
     def send_message(self, peer, message):
-        # message = f"{self.name}: {message}"
         message = f"{message}"
-        self.connections[peer].send(message.encode('utf-8'))
+        if self.disconnect_flag[peer] == False:
+            self.connections[peer].send(message.encode('utf-8'))
 
     def log_to_txt(self, message):
         with open(f'{self.name}_log.txt','a') as file:
@@ -407,7 +374,7 @@ class Server:
                             message_json = json.dumps(message_dict)
                             self.broadcast_message(message_json)
 
-                            # create a new post to leader's block chain # TODO: create a new post blog class
+                            # create a new post to leader's block chain
                             self.create_new_post(message['accepted_val'])
 
                             if message['accepted_val'].split()[0] == 'POST':
@@ -424,6 +391,8 @@ class Server:
                                         print(f"Error! This comment already existed:\n\t{message['accepted_val'].split()[4]}: {comment}\n")
                             # clear the cache
                             self.Paxos.clear()
+                            self.save()
+
 
                     elif message["msg_type"] == "DECIDE":
                         # DECIDE <1,P1> 'POST username title content'
@@ -445,9 +414,11 @@ class Server:
                                 else:
                                     print(f"Error! This comment already existed:\n\t{message['accepted_val'].split()[4]}: {comment}\n")
                         
+                        self.curr_leader = message["sender"]
                         self.Paxos.depth += 1
                         # clear the cache
                         self.Paxos.clear()
+                        self.save()
                     
                 # else:
                     # print("receive_messages() receive nothings")
@@ -456,6 +427,66 @@ class Server:
                 # print("ConnectionResetError")
                 sys.stdout.flush()
                 break
+            
+    def save(self):
+         # save the BC
+        bc_list = [log.__dict__ for log in BC_Logs]
+        with open(f'{self.name}_BC.json','w') as file:
+            json.dump(bc_list, file)
+        print("SAVED BC")
+        # save the info
+        server_info = {
+            'curr_leader': self.curr_leader,
+            'id': self.Paxos.id,
+            'ballot_num': self.Paxos.ballot_num,
+            'ballot_num_id': self.Paxos.ballot_num_id,
+            'depth': self.Paxos.depth,
+            'accepted_ballot_num': self.Paxos.accepted_ballot_num,
+            'accepted_ballot_num_id': self.Paxos.accepted_ballot_num_id,
+            'accepted_value': self.Paxos.accepted_value,
+            'proposal': self.Paxos.proposal
+        }
+        with open(f'{self.name}_info.json', 'w') as file:
+            json.dump(server_info, file)
+        print("SAVED info")
+        # save the Blog class
+        with open(f'{self.name}_blog.json', 'w') as file:
+            blog_dict = {str(key): post.to_dict() for key, post in self.Blog.blog_list.items()}
+            json.dump(blog_dict, file)
+        print("SAVED blog")
+
+    def load(self):
+        # load the BC
+        with open(f'{self.name}_BC.json','r') as file:
+            bc_list = json.load(file)
+        BC_Logs = [BC.Log(**log_dict) for log_dict in bc_list]
+        print("LOADED BC")
+
+        # load the info
+        with open(f'{self.name}_info.json', 'r') as file:
+            server_info = json.load(file)
+        
+        # if self.name == server_info['curr_leader']:
+            # self.curr_leader = None
+        self.curr_leader = server_info['curr_leader']
+        # Reconstructing the Paxos instance with saved state
+        self.Paxos.id = server_info['id']
+        self.Paxos.ballot_num = server_info['ballot_num']
+        self.Paxos.ballot_num_id = server_info['ballot_num_id']
+        self.Paxos.depth = server_info['depth']
+        self.Paxos.accepted_ballot_num = server_info['accepted_ballot_num']
+        self.Paxos.accepted_ballot_num_id = server_info['accepted_ballot_num_id']
+        self.Paxos.accepted_value = server_info['accepted_value']
+        self.Paxos.proposal = server_info['proposal']
+        print("LOADED info")
+
+        # load the Blog class
+        with open(f'{self.name}_blog.json', 'r') as file:
+            blog_dict = json.load(file)
+        blog_list = {literal_eval(key): Blog.Post.from_dict(post) for key, post in blog_dict.items()}
+        self.Blog.blog_list = blog_list
+        print("LOADED blog")
+
 
     def connect_to_peer(self, peer):
         if peer != self.name and peer not in self.connections and self.ports[peer] > self.port:
@@ -473,6 +504,9 @@ class Server:
     def connect_to_peers(self):
         while True:
             for peer in self.peers:
+                #check if the disconnect flag is true, if true, then skip this peer
+                if self.disconnect_flag[peer] == True:
+                    continue
                 self.connect_to_peer(peer)
             sleep(2)
     #         # print("trying to reconnecting to other peer")
@@ -513,6 +547,8 @@ class Server:
 
     def show_command(self):
         print("BlockChain or BC")
+        print("failLink")
+        print("fixLink")
         print("POST username title content")
         print("COMMENT username title content")
         print("view all posts")
