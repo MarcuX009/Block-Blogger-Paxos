@@ -1,8 +1,8 @@
 <H1> CS171 Final Project, June 2023</H1>
 <H2> Author: Wenjin Li, An Cao </H2>
+<H2> Attention students taking this class or studying this subject: kindly refrain from simply copying and utilizing this code for your submission. Your instructor will be able to detect this. Please refer to the 'LICENSE' for additional restrictions. </H2>
 
-
-Note: `save` and `load` command only used when you want to manually save or recover the server info from disk, server will auto recover from the majority's info when it join the distributed systerm.
+Note: `save` and `load` commands are only used when you want to save or recover the server info from disk manually, the server will auto-recover from the majority's information when it joins the distributed system.
 
 |      Commands      |        Use for         |
 |:-------------------|:---------------------------------:|
